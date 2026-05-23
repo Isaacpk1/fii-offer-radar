@@ -1,0 +1,9 @@
+pandas
+requests
+yfinance
+streamlit
+plotly
+python-dotenv
+langchain-google-genai
+langchain-experimental
+tabulate

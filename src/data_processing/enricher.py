@@ -1,0 +1,71 @@
+from pathlib import Path
+
+import pandas as pd
+
+
+SRC_DIR = Path(__file__).resolve().parents[1]
+RAW_DATA_DIR = SRC_DIR / "data" / "raw"
+PROCESSED_DATA_DIR = SRC_DIR / "data" / "processed"
+
+
+def cruzar_cvm_com_macro(df_cvm_limpo):
+    """Cruza os dados limpos da CVM com a taxa Selic e o valor do IFIX."""
+    print("Enriquecendo ofertas com dados macroeconomicos (Selic e IFIX)...")
+
+    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    try:
+        df_selic = pd.read_csv(RAW_DATA_DIR / "selic_bruto.csv", sep=";")
+        df_selic["data"] = pd.to_datetime(df_selic["data"])
+
+        df_ifix = pd.read_csv(RAW_DATA_DIR / "ifix_bruto.csv", sep=";")
+        df_ifix["Date"] = pd.to_datetime(df_ifix["Date"])
+
+        if df_ifix["Date"].dt.tz is not None:
+            df_ifix["Date"] = df_ifix["Date"].dt.tz_localize(None)
+
+        df_cvm_limpo = df_cvm_limpo.sort_values("Data_requerimento")
+        df_selic = df_selic.sort_values("data")
+        df_ifix = df_ifix.sort_values("Date")
+
+        df_enriquecido = pd.merge_asof(
+            df_cvm_limpo,
+            df_selic[["data", "valor"]],
+            left_on="Data_requerimento",
+            right_on="data",
+            direction="backward",
+        )
+        df_enriquecido.rename(columns={"valor": "Taxa_Selic_Data_Oferta"}, inplace=True)
+        df_enriquecido.drop(columns=["data"], inplace=True)
+
+        df_enriquecido = pd.merge_asof(
+            df_enriquecido,
+            df_ifix[["Date", "Close"]],
+            left_on="Data_requerimento",
+            right_on="Date",
+            direction="backward",
+        )
+        df_enriquecido.rename(columns={"Close": "Pontos_IFIX_Data_Oferta"}, inplace=True)
+        df_enriquecido.drop(columns=["Date"], inplace=True)
+
+        df_enriquecido["Taxa_Selic_Data_Oferta"] = df_enriquecido[
+            "Taxa_Selic_Data_Oferta"
+        ].round(2)
+        df_enriquecido["Pontos_IFIX_Data_Oferta"] = df_enriquecido[
+            "Pontos_IFIX_Data_Oferta"
+        ].round(2)
+
+        df_enriquecido = df_enriquecido.sort_values(
+            by="Data_requerimento",
+            ascending=False,
+        )
+
+        caminho_final = PROCESSED_DATA_DIR / "ofertas_fiis_pronto_para_ia.csv"
+        df_enriquecido.to_csv(caminho_final, sep=";", index=False, encoding="utf-8")
+
+        print(f"Enriquecimento concluido. Arquivo final salvo em: {caminho_final}")
+        return df_enriquecido
+
+    except Exception as e:
+        print(f"Erro ao cruzar dados: {e}")
+        return None
