@@ -1,9 +1,12 @@
 pandas
 requests
 yfinance
+bcb
 streamlit
+streamlit-aggrid
 plotly
 python-dotenv
 langchain-google-genai
 langchain-experimental
 tabulate
+playwright

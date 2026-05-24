@@ -1,39 +1,55 @@
 from pathlib import Path
 
+from bcb import sgs
 import pandas as pd
-import requests
 import yfinance as yf
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAW_DATA_DIR = PROJECT_ROOT / "src" / "data" / "raw"
+MACRO_SERIES = {
+    "Taxa_Selic_Data_Oferta": 11,
+    "IPCA_12m_Data_Oferta": 13522,
+    "CDI_Data_Oferta": 12,
+    "USD_BRL_Data_Oferta": 1,
+}
+
+
+def obter_indicadores_macro(data_inicio="2023-01-01", data_fim="2026-12-31"):
+    """Obtem Selic, IPCA 12m, CDI e USD/BRL pelo SGS do Banco Central."""
+    RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    print(f"Obtendo indicadores macro de {data_inicio} a {data_fim}...")
+
+    try:
+        df_macro = sgs.get(MACRO_SERIES, start=data_inicio, end=data_fim)
+        df_macro = df_macro.reset_index().rename(columns={"Date": "data"})
+        df_macro["data"] = pd.to_datetime(df_macro["data"])
+
+        caminho_saida = RAW_DATA_DIR / "macro_bcb_bruto.csv"
+        df_macro.to_csv(caminho_saida, index=False, sep=";")
+
+        # Mantem compatibilidade com versoes anteriores do pipeline.
+        df_macro[["data", "Taxa_Selic_Data_Oferta"]].rename(
+            columns={"Taxa_Selic_Data_Oferta": "valor"}
+        ).to_csv(RAW_DATA_DIR / "selic_bruto.csv", index=False, sep=";")
+
+        print(f"Indicadores macro salvos em: {caminho_saida}")
+        return df_macro
+    except Exception as e:
+        print(f"Erro ao obter indicadores macro: {e}")
+        return None
 
 
 def obter_selic(data_inicio="01/01/2023", data_fim="31/12/2026"):
-    """Obtem a taxa Selic diaria do Banco Central do Brasil (SGS)."""
-    RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    print(f"Obtendo dados da Selic de {data_inicio} a {data_fim}...")
-
-    url = (
-        "http://api.bcb.gov.br/dados/serie/bcdata.sgs.11/dados"
-        f"?formato=json&dataInicial={data_inicio}&dataFinal={data_fim}"
-    )
-
-    try:
-        resp = requests.get(url, timeout=30)
-        resp.raise_for_status()
-
-        df_selic = pd.DataFrame(resp.json())
-        df_selic["data"] = pd.to_datetime(df_selic["data"], format="%d/%m/%Y")
-        df_selic["valor"] = pd.to_numeric(df_selic["valor"])
-
-        caminho_saida = RAW_DATA_DIR / "selic_bruto.csv"
-        df_selic.to_csv(caminho_saida, index=False, sep=";")
-        print(f"Dados da Selic salvos em: {caminho_saida}")
-        return df_selic
-    except Exception as e:
-        print(f"Erro ao obter a Selic: {e}")
+    """Compatibilidade: obtem somente a serie Selic a partir do CSV macro."""
+    inicio_iso = pd.to_datetime(data_inicio, dayfirst=True).strftime("%Y-%m-%d")
+    fim_iso = pd.to_datetime(data_fim, dayfirst=True).strftime("%Y-%m-%d")
+    df_macro = obter_indicadores_macro(inicio_iso, fim_iso)
+    if df_macro is None:
         return None
+    return df_macro[["data", "Taxa_Selic_Data_Oferta"]].rename(
+        columns={"Taxa_Selic_Data_Oferta": "valor"}
+    )
 
 
 def obter_ifix(data_inicio="2023-01-01", data_fim="2026-12-31"):
@@ -61,5 +77,5 @@ def obter_ifix(data_inicio="2023-01-01", data_fim="2026-12-31"):
 
 
 if __name__ == "__main__":
-    obter_selic()
+    obter_indicadores_macro()
     obter_ifix()

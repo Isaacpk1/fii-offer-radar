@@ -3,12 +3,23 @@ import sys
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
+from langchain_classic.memory import ConversationBufferMemory
+from plotly.subplots import make_subplots
+
+try:
+    from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+except ImportError:
+    AgGrid = None
+    GridOptionsBuilder = None
+    GridUpdateMode = None
 
 
 SRC_DIR = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = SRC_DIR.parent
 PROCESSED_DATA_PATH = SRC_DIR / "data" / "processed" / "ofertas_fiis_pronto_para_ia.csv"
+STATUS_ALERTS_PATH = SRC_DIR / "data" / "processed" / "status_monitor_alerts.json"
 
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -38,7 +49,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<p class="subtitle">Analise comparativa de ofertas primarias de Fundos de Investimento Imobiliario com dados reais da CVM, Selic e IFIX.</p>',
+    '<p class="subtitle">Analise comparativa de ofertas primarias de Fundos de Investimento Imobiliario com dados reais da CVM, Selic, IPCA, CDI, cambio e IFIX.</p>',
     unsafe_allow_html=True,
 )
 st.divider()
@@ -76,6 +87,42 @@ def validar_colunas(df: pd.DataFrame) -> None:
         st.stop()
 
 
+def colunas_macro_disponiveis(df: pd.DataFrame) -> list[str]:
+    candidatas = [
+        "Taxa_Selic_Data_Oferta",
+        "CDI_Data_Oferta",
+        "IPCA_12m_Data_Oferta",
+        "USD_BRL_Data_Oferta",
+        "Pontos_IFIX_Data_Oferta",
+    ]
+    return [col for col in candidatas if col in df.columns and df[col].notna().any()]
+
+
+def exibir_grade_interativa(df: pd.DataFrame, key: str):
+    if AgGrid is None:
+        st.info("Instale `streamlit-aggrid` para filtros avancados por coluna. Usando tabela nativa.")
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        return []
+
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_default_column(filter=True, sortable=True, resizable=True)
+    gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=20)
+    gb.configure_selection(selection_mode="single", use_checkbox=True)
+    grid_options = gb.build()
+
+    response = AgGrid(
+        df,
+        gridOptions=grid_options,
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+        use_container_width=True,
+        key=key,
+    )
+    selected = response.get("selected_rows", [])
+    if isinstance(selected, pd.DataFrame):
+        return selected.to_dict("records")
+    return selected or []
+
+
 @st.cache_data(show_spinner=False)
 def carregar_ofertas_fiis() -> pd.DataFrame:
     if not PROCESSED_DATA_PATH.exists():
@@ -92,12 +139,16 @@ def carregar_ofertas_fiis() -> pd.DataFrame:
     df["Valor_Total_Registrado"] = pd.to_numeric(
         df["Valor_Total_Registrado"], errors="coerce"
     ).fillna(0)
-    df["Taxa_Selic_Data_Oferta"] = pd.to_numeric(
-        df["Taxa_Selic_Data_Oferta"], errors="coerce"
-    )
-    df["Pontos_IFIX_Data_Oferta"] = pd.to_numeric(
-        df["Pontos_IFIX_Data_Oferta"], errors="coerce"
-    )
+
+    for coluna in [
+        "Taxa_Selic_Data_Oferta",
+        "Pontos_IFIX_Data_Oferta",
+        "IPCA_12m_Data_Oferta",
+        "CDI_Data_Oferta",
+        "USD_BRL_Data_Oferta",
+    ]:
+        if coluna in df.columns:
+            df[coluna] = pd.to_numeric(df[coluna], errors="coerce")
 
     df = df.dropna(subset=["Data_requerimento"]).copy()
     df["Ano_Mes"] = df["Data_requerimento"].dt.to_period("M").astype(str)
@@ -110,15 +161,29 @@ def carregar_ofertas_fiis() -> pd.DataFrame:
     return df.sort_values("Data_requerimento", ascending=False)
 
 
-@st.cache_resource(show_spinner=False)
 def carregar_agente():
-    return inicializar_agente_analista()
+    if "agent_memory" not in st.session_state:
+        st.session_state.agent_memory = ConversationBufferMemory(
+            memory_key="chat_history",
+            return_messages=True,
+        )
+    if "agente" not in st.session_state:
+        st.session_state.agente = inicializar_agente_analista(
+            memory=st.session_state.agent_memory
+        )
+    return st.session_state.agente
 
 
 df_ofertas = carregar_ofertas_fiis()
 
 with st.sidebar:
     st.header("Filtros")
+    if STATUS_ALERTS_PATH.exists():
+        alertas_status = pd.read_json(STATUS_ALERTS_PATH)
+        if not alertas_status.empty:
+            st.warning(f"{len(alertas_status)} mudanca(s) de status detectada(s).")
+            with st.expander("Ver alertas de status"):
+                st.dataframe(alertas_status, use_container_width=True, hide_index=True)
 
     data_min = df_ofertas["Data_requerimento"].min().date()
     data_max = df_ofertas["Data_requerimento"].max().date()
@@ -158,9 +223,10 @@ if df_filtrado.empty:
     st.stop()
 
 
-tab_mercado, tab_comparacao, tab_lideres, tab_base, tab_copiloto = st.tabs(
+tab_mercado, tab_macro, tab_comparacao, tab_lideres, tab_base, tab_copiloto = st.tabs(
     [
         "Visao de Mercado",
+        "Macro",
         "Comparacao de Ofertas",
         "Coordenadores",
         "Base CVM",
@@ -197,16 +263,51 @@ with tab_mercado:
         .sort_values("Ano_Mes")
     )
 
+    fig_dual = make_subplots(specs=[[{"secondary_y": True}]])
+    fig_dual.add_trace(
+        go.Bar(
+            x=volume_mensal["Ano_Mes"],
+            y=volume_mensal["Volume"],
+            name="Volume registrado",
+            marker_color="#002F6C",
+        ),
+        secondary_y=False,
+    )
+    fig_dual.add_trace(
+        go.Scatter(
+            x=volume_mensal["Ano_Mes"],
+            y=volume_mensal["Selic_media"],
+            name="Selic media",
+            line={"color": "#E24B4A", "width": 3},
+        ),
+        secondary_y=True,
+    )
+    fig_dual.update_yaxes(title_text="Volume registrado", secondary_y=False)
+    fig_dual.update_yaxes(title_text="Selic media (%)", secondary_y=True)
+    fig_dual.update_layout(title="Volume mensal x Selic media", legend_orientation="h")
+    st.plotly_chart(fig_dual, use_container_width=True)
+
     col_graf1, col_graf2 = st.columns(2)
     with col_graf1:
-        fig_volume = px.bar(
-            volume_mensal,
-            x="Ano_Mes",
-            y="Volume",
-            labels={"Ano_Mes": "Mes", "Volume": "Volume registrado"},
-            color_discrete_sequence=["#002F6C"],
+        colunas_corr = ["Valor_Total_Registrado"] + colunas_macro_disponiveis(df_filtrado)
+        matriz_corr = (
+            df_filtrado[colunas_corr]
+            .corr(numeric_only=True)
+            .dropna(how="all")
+            .dropna(axis=1, how="all")
         )
-        st.plotly_chart(fig_volume, use_container_width=True)
+        if matriz_corr.shape[0] >= 2:
+            fig_corr = px.imshow(
+                matriz_corr,
+                text_auto=".2f",
+                color_continuous_scale="RdBu_r",
+                zmin=-1,
+                zmax=1,
+                title="Correlacao macro x mercado",
+            )
+            st.plotly_chart(fig_corr, use_container_width=True)
+        else:
+            st.info("Dados insuficientes para calcular a matriz de correlacao.")
 
     with col_graf2:
         status_volume = (
@@ -253,6 +354,93 @@ with tab_mercado:
             color_continuous_scale="Teal",
         )
         st.plotly_chart(fig_publico, use_container_width=True)
+
+    if st.button("Gerar relatorio executivo", type="primary"):
+        top_lideres = (
+            df_filtrado.groupby("Nome_Lider")["Valor_Total_Registrado"]
+            .sum()
+            .sort_values(ascending=False)
+            .head(5)
+        )
+        status_dist = (
+            df_filtrado.groupby("Status_Requerimento")["Valor_Total_Registrado"]
+            .sum()
+            .sort_values(ascending=False)
+        )
+        prompt_relatorio = f"""
+        Gere um relatorio executivo em tres paragrafos sobre o recorte filtrado de ofertas de FIIs.
+        KPIs: volume total {formatar_moeda(volume_total)}, total de ofertas {total_ofertas},
+        ticket medio {formatar_moeda(ticket_medio)}, Selic media {selic_media:.2f}%.
+        Top coordenadores por volume: {top_lideres.to_dict()}.
+        Distribuicao por status: {status_dist.to_dict()}.
+        Estruture como: cenario macro, performance de mercado e destaques/anomalias.
+        """
+        with st.spinner("Gerando relatorio com o copiloto..."):
+            try:
+                resposta = carregar_agente().invoke({"input": prompt_relatorio})
+                st.session_state["relatorio_executivo"] = resposta.get("output", str(resposta))
+            except Exception as e:
+                st.error(f"Nao foi possivel gerar relatorio: {e}")
+
+    if "relatorio_executivo" in st.session_state:
+        st.markdown(st.session_state["relatorio_executivo"])
+
+
+with tab_macro:
+    st.subheader("Painel macro comparativo")
+    st.caption("Volume de ofertas no eixo esquerdo e indicadores macro no eixo direito.")
+
+    agg_map = {
+        "Volume": ("Valor_Total_Registrado", "sum"),
+        "Selic": ("Taxa_Selic_Data_Oferta", "mean"),
+    }
+    if "CDI_Data_Oferta" in df_filtrado.columns:
+        agg_map["CDI"] = ("CDI_Data_Oferta", "mean")
+    if "IPCA_12m_Data_Oferta" in df_filtrado.columns:
+        agg_map["IPCA_12m"] = ("IPCA_12m_Data_Oferta", "mean")
+    if "USD_BRL_Data_Oferta" in df_filtrado.columns:
+        agg_map["USD_BRL"] = ("USD_BRL_Data_Oferta", "mean")
+
+    macro_mensal = (
+        df_filtrado.groupby("Ano_Mes", as_index=False)
+        .agg(**agg_map)
+        .sort_values("Ano_Mes")
+    )
+    fig_macro = make_subplots(specs=[[{"secondary_y": True}]])
+    fig_macro.add_trace(
+        go.Bar(
+            x=macro_mensal["Ano_Mes"],
+            y=macro_mensal["Volume"],
+            name="Volume",
+            marker_color="#002F6C",
+        ),
+        secondary_y=False,
+    )
+    for coluna, cor in [("Selic", "#E24B4A"), ("CDI", "#008080"), ("IPCA_12m", "#7A4DD8"), ("USD_BRL", "#D98C00")]:
+        if coluna in macro_mensal and macro_mensal[coluna].notna().any():
+            fig_macro.add_trace(
+                go.Scatter(
+                    x=macro_mensal["Ano_Mes"],
+                    y=macro_mensal[coluna],
+                    name=coluna,
+                    line={"color": cor},
+                ),
+                secondary_y=True,
+            )
+    fig_macro.update_yaxes(title_text="Volume registrado", secondary_y=False)
+    fig_macro.update_yaxes(title_text="Indicadores macro", secondary_y=True)
+    fig_macro.update_layout(legend_orientation="h")
+    st.plotly_chart(fig_macro, use_container_width=True)
+
+    macro_cols = colunas_macro_disponiveis(df_filtrado)
+    if macro_cols:
+        st.dataframe(
+            df_filtrado[["Data_requerimento", "Numero_Processo", "Valor_Total_Registrado"] + macro_cols],
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.info("Rode o pipeline atualizado para preencher IPCA, CDI e cambio.")
 
 
 with tab_comparacao:
@@ -326,7 +514,7 @@ with tab_comparacao:
             "Publico_alvo",
             "Taxa_Selic_Data_Oferta",
             "Pontos_IFIX_Data_Oferta",
-        ]
+        ] + [col for col in ["IPCA_12m_Data_Oferta", "CDI_Data_Oferta", "USD_BRL_Data_Oferta"] if col in df_comp.columns]
         st.dataframe(
             df_comp[colunas_comparacao].sort_values("Valor_Total_Registrado", ascending=False),
             use_container_width=True,
@@ -377,11 +565,44 @@ with tab_lideres:
         fig_share.update_layout(xaxis_tickangle=-35)
         st.plotly_chart(fig_share, use_container_width=True)
 
-    st.dataframe(
-        ranking.assign(Market_Share=lambda df: df["Market_Share"].map(lambda x: f"{x:.2%}")),
-        use_container_width=True,
-        hide_index=True,
+    ranking_grid = ranking.assign(
+        Market_Share_Texto=lambda df: df["Market_Share"].map(lambda x: f"{x:.2%}")
     )
+    selecionadas_ranking = exibir_grade_interativa(ranking_grid, key="ranking_aggrid")
+    if selecionadas_ranking:
+        st.session_state["lider_drilldown"] = selecionadas_ranking[0]["Nome_Lider"]
+
+    lider_drill = st.session_state.get("lider_drilldown")
+    if lider_drill:
+        st.markdown(f"#### Drill-down: {lider_drill}")
+        df_drill = df_filtrado[df_filtrado["Nome_Lider"] == lider_drill]
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            fig_drill = px.bar(
+                df_drill.groupby("Ano_Mes", as_index=False)["Valor_Total_Registrado"].sum(),
+                x="Ano_Mes",
+                y="Valor_Total_Registrado",
+                labels={"Valor_Total_Registrado": "Volume"},
+            )
+            st.plotly_chart(fig_drill, use_container_width=True)
+        with col_d2:
+            fig_drill_status = px.pie(
+                df_drill,
+                names="Status_Requerimento",
+                values="Valor_Total_Registrado",
+                hole=0.45,
+            )
+            st.plotly_chart(fig_drill_status, use_container_width=True)
+
+    fig_treemap = px.treemap(
+        df_filtrado,
+        path=["Nome_Lider", "Nome_Emissor"],
+        values="Valor_Total_Registrado",
+        color="Taxa_Selic_Data_Oferta",
+        color_continuous_scale="RdYlGn_r",
+        title="Distribuicao de volume por coordenador e emissor",
+    )
+    st.plotly_chart(fig_treemap, use_container_width=True)
 
 
 with tab_base:
@@ -399,12 +620,12 @@ with tab_base:
         "Publico_alvo",
         "Taxa_Selic_Data_Oferta",
         "Pontos_IFIX_Data_Oferta",
-    ]
-    st.dataframe(
-        df_filtrado[colunas_exibir],
-        use_container_width=True,
-        hide_index=True,
-    )
+    ] + [col for col in ["IPCA_12m_Data_Oferta", "CDI_Data_Oferta", "USD_BRL_Data_Oferta"] if col in df_filtrado.columns]
+
+    selecionadas_base = exibir_grade_interativa(df_filtrado[colunas_exibir], key="base_aggrid")
+    if selecionadas_base:
+        st.markdown("#### Oferta selecionada")
+        st.json(selecionadas_base[0])
 
     csv_export = df_filtrado[colunas_exibir].to_csv(sep=";", index=False).encode("utf-8")
     st.download_button(
@@ -418,7 +639,7 @@ with tab_base:
 with tab_copiloto:
     st.subheader("Assistente de research")
     st.caption(
-        "O agente usa a mesma base processada de ofertas de FIIs, enriquecida com Selic e IFIX."
+        "O agente usa memoria de conversa, a base processada e tools para macro atual, consulta CVM e spread contra CDI."
     )
 
     if "mensagens" not in st.session_state:
@@ -429,7 +650,7 @@ with tab_copiloto:
             st.markdown(msg["content"])
 
     pergunta = st.chat_input(
-        "Pergunte sobre ranking, volume, coordenadores, publico-alvo, Selic ou IFIX..."
+        "Pergunte sobre ranking, volume, coordenadores, publico-alvo, Selic, CDI, IPCA ou IFIX..."
     )
 
     if pergunta:
@@ -440,8 +661,7 @@ with tab_copiloto:
         with st.chat_message("assistant"):
             with st.spinner("Analisando a base de ofertas de FIIs..."):
                 try:
-                    agente = carregar_agente()
-                    resposta = agente.invoke({"input": pergunta})
+                    resposta = carregar_agente().invoke({"input": pergunta})
                     texto_resposta = resposta.get("output", str(resposta))
                     st.markdown(texto_resposta)
                     st.session_state.mensagens.append(

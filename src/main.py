@@ -15,7 +15,7 @@ def executar_pipeline():
     print("\n--- Fase 1: Extracao ---")
     try:
         cvm_extractor.baixar_dados_cvm()
-        macro_extractor.obter_selic()
+        macro_extractor.obter_indicadores_macro()
         macro_extractor.obter_ifix()
     except Exception as e:
         print(f"Erro na extracao: {e}")
