@@ -38,36 +38,3 @@ TABLE_LABELS = {
     "fii_metricas": "Metricas comparativas",
     "data_quality_report": "Qualidade dos dados",
 }
-
-TAPI_STEPS = [
-    {
-        "titulo": "Coleta automatizada",
-        "texto": "CVM, Banco Central, yfinance e scrapers de noticias entram no pipeline.",
-        "status": "Implementado",
-    },
-    {
-        "titulo": "Documentos de oferta",
-        "texto": "PDFs de anuncios, prospectos e comunicados ficam catalogados por processo.",
-        "status": "Implementado",
-    },
-    {
-        "titulo": "Extracao deterministica",
-        "texto": "Regex e validacoes capturam campos objetivos quando o PDF esta bem estruturado.",
-        "status": "Implementado",
-    },
-    {
-        "titulo": "Extracao semantica",
-        "texto": "LangChain interpreta guidance, rendimento alvo e tabelas quebradas quando o regex nao basta.",
-        "status": "Parcial",
-    },
-    {
-        "titulo": "Tese da oferta",
-        "texto": "Cada processo CVM vira uma tese com preco, liquidez, historico, macro e DY projetado.",
-        "status": "Implementado",
-    },
-    {
-        "titulo": "Copiloto analitico",
-        "texto": "O agente conversa com o warehouse e explica os sinais para a decisao.",
-        "status": "Implementado",
-    },
-]

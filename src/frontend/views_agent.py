@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from ai_core.tools import RankingOfertas
 from frontend.agent_session import carregar_agente
 from frontend.components import tabela_interativa
-from frontend.config import AMBER, BTG_BLUE, GREEN, MUTED, RED, TABLE_LABELS, TAPI_STEPS, TEAL
+from frontend.config import AMBER, BTG_BLUE, GREEN, MUTED, RED, TABLE_LABELS, TEAL
 from frontend.data import get_connection, load_table
 from frontend.formatters import coverage_color, formatar_moeda, formatar_percentual, status_class
 
@@ -20,7 +20,7 @@ from frontend.formatters import coverage_color, formatar_moeda, formatar_percent
 ALERTAS_DIR = Path("src/data/alertas_autonomos")
 
 
-from frontend.view_utils import _extrair_json_resposta
+from frontend.view_utils import _extrair_json_resposta, resposta_agente_para_texto
 
 
 def render_ranking_autonomo() -> None:
@@ -33,7 +33,7 @@ def render_ranking_autonomo() -> None:
             )
 
         try:
-            texto = resposta.get("output", "")
+            texto = resposta_agente_para_texto(resposta)
             ranking = RankingOfertas.model_validate_json(_extrair_json_resposta(texto))
 
             st.info(f"**Macro:** {ranking.contexto_macro}")
@@ -64,7 +64,7 @@ def render_ranking_autonomo() -> None:
         except (ValidationError, json.JSONDecodeError, ValueError) as exc:
             st.warning("Agente nao retornou JSON estruturado. Resposta bruta:")
             st.caption(str(exc))
-            st.markdown(resposta.get("output", str(resposta)))
+            st.markdown(resposta_agente_para_texto(resposta))
 
 
 def render_acoes_autonomas(inteligencia: pd.DataFrame) -> None:
@@ -94,7 +94,7 @@ def render_acoes_autonomas(inteligencia: pd.DataFrame) -> None:
                         )
                     }
                 )
-            st.success(resposta.get("output", str(resposta)))
+            st.success(resposta_agente_para_texto(resposta))
 
     with col2:
         st.markdown("**Registrar decisao**")
@@ -115,7 +115,7 @@ def render_acoes_autonomas(inteligencia: pd.DataFrame) -> None:
                         )
                     }
                 )
-            st.success(resposta.get("output", str(resposta)))
+            st.success(resposta_agente_para_texto(resposta))
 
 
 def render_alertas_autonomos() -> None:
@@ -147,7 +147,8 @@ def render_alertas_autonomos() -> None:
         st.info(f"**Acao recomendada:** {resultado['acao_recomendada']}")
 
 
-def render_confidence_caption_from_text(texto: str) -> None:
+def render_confidence_caption_from_text(texto: object) -> None:
+    texto = resposta_agente_para_texto(texto)
     match = re.search(
         r"Confianca da analise:\s*([A-Za-zÀ-ÿ]+)\s*\((\d+(?:[.,]\d+)?)/100\)",
         texto,
@@ -197,7 +198,7 @@ def render_copilot(ofertas: pd.DataFrame) -> None:
             with st.spinner("Analisando dados e contexto..."):
                 try:
                     resposta = carregar_agente().invoke({"input": pergunta})
-                    texto = resposta.get("output", str(resposta))
+                    texto = resposta_agente_para_texto(resposta)
                     render_confidence_caption_from_text(texto)
                     st.markdown(texto)
                     st.session_state.mensagens.append({"role": "assistant", "content": texto})

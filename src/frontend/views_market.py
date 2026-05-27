@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from ai_core.tools import RankingOfertas
 from frontend.agent_session import carregar_agente
 from frontend.components import tabela_interativa
-from frontend.config import AMBER, BTG_BLUE, GREEN, MUTED, RED, TABLE_LABELS, TAPI_STEPS, TEAL
+from frontend.config import AMBER, BTG_BLUE, GREEN, MUTED, RED, TABLE_LABELS, TEAL
 from frontend.data import get_connection, load_table
 from frontend.formatters import coverage_color, formatar_moeda, formatar_percentual, status_class
 

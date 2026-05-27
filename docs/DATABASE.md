@@ -1,6 +1,6 @@
 # Base Analitica de FIIs
 
-Este documento descreve como montar a base de dados necessaria para comparar FIIs e ofertas primarias com as metricas do material `Analise de FII`.
+Este documento descreve como montar a base de dados necessaria para comparar FIIs e ofertas primarias no dashboard e no agente.
 
 ## Objetivo
 
@@ -218,7 +218,7 @@ Campos principais:
 - `coordenador_principal`
 - `dividend_yield_12m`
 
-Uso: tela de comparacao de FIIs e ranking de oportunidades.
+Uso: aba Suporte FII. Esta tabela ajuda a entender o fundo por tras da oferta, inclusive quando nao ha ticker/preco B3 coletado.
 
 ### `oferta_projecoes`
 
@@ -238,7 +238,7 @@ Campos principais:
 - `fonte_trecho`
 - `confianca_extracao`
 
-Uso: comparar a oferta pelo preco de emissao usando historico CVM e receber, depois, o DY projetado extraido de prospectos com Playwright + parser/IA.
+Uso: comparar a oferta pelo preco de emissao usando historico CVM e DY projetado extraido de documentos quando houver catalogo/PDF/processamento disponivel.
 
 ### `oferta_inteligencia`
 
@@ -264,6 +264,13 @@ Campos principais:
 - `score_priorizacao`
 - `leitura_priorizacao`
 - `cobertura_analise_percentual`
+- `confianca_total`
+- `confianca_nivel`
+- `confianca_dados`
+- `confianca_sinais`
+- `confianca_contexto`
+- `confianca_resumo`
+- `dados_ausentes_criticos`
 
 Uso: ranquear quais emissoes merecem analise primeiro, sem transformar o app em um screener generico de FIIs.
 
@@ -282,7 +289,7 @@ Campos principais:
 
 Uso: saber exatamente quais comparacoes ja sao confiaveis e quais ainda precisam de fonte.
 
-## Comparacoes Do PDF
+## Comparacoes Do Produto
 
 | Comparacao | Tabela | Campo/Formula | Status |
 | --- | --- | --- | --- |
@@ -292,7 +299,7 @@ Uso: saber exatamente quais comparacoes ja sao confiaveis e quais ainda precisam
 | P/VP da emissao | `oferta_inteligencia` | `p_vp_emissao` | Implementado quando ha VP/C |
 | Patrimonio liquido | `oferta_inteligencia` | `patrimonio_liquido` | Suporte quando ha informe geral |
 | Dividend Yield 12m historico | `oferta_projecoes` / `oferta_inteligencia` | soma 12m de rendimento estimado / `preco_emissao` | Implementado como baseline CVM |
-| DY projetado da oferta | `oferta_projecoes` / `oferta_inteligencia` | extraido do prospecto/estudo de viabilidade | Estrutura pronta; parser pendente |
+| DY projetado da oferta | `oferta_projecoes` / `oferta_inteligencia` | extraido do prospecto/estudo de viabilidade quando encontrado | Parcial; depende de documento e qualidade da extracao |
 | Rendimento por cota | `fii_rendimentos` | `Dividend_Yield_Mes x Valor_Cota_VPC` | Implementado como estimativa CVM |
 | Historico de pagamentos | `fii_rendimentos` | serie temporal mensal estimada | Implementado como estimativa CVM |
 | Vacancia | `fii_portfolio` | `vacancia_fisica`, `vacancia_financeira` | Pendente |
@@ -334,7 +341,7 @@ Prioridade recomendada:
    - substituir ou validar a estimativa CVM com fonte oficial de pagamentos;
    - recalcular `dividend_yield_12m`.
 
-2. `oferta_document_manifest.py` + Playwright/parser de PDF
+2. Melhorar extracao de documentos de oferta
    - gerar a fila de prospectos pendentes;
    - baixar prospectos/estudos de viabilidade;
    - preencher `dy_projetado_oferta`, `rendimento_anual_projetado_por_cota`, `fonte_trecho` e `confianca_extracao`.

@@ -1,14 +1,51 @@
+# Ambiente / segredos
 .env
+.env.*
+!.env.example
 venv/
+.venv/
+env/
+ENV/
+
+# Python
 __pycache__/
 *.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Logs e execucoes locais
 *.log
+*.out
+*.err
+streamlit.*.log
 .streamlit/
 
-# Dados gerados pelo pipeline.
-src/data/raw/*.csv
-src/data/processed/*.csv
-src/data/processed/*.json
-src/data/processed/*.duckdb
+# Dados e artefatos gerados pelo pipeline
+src/data/**
+!src/data/
+!src/data/raw/
 !src/data/raw/.gitkeep
+!src/data/processed/
 !src/data/processed/.gitkeep
+
+# Bancos locais / locks
+*.duckdb
+*.duckdb.wal
+*.duckdb.tmp
+
+# Playwright
+playwright-report/
+test-results/
+
+# Sistema / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

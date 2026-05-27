@@ -135,12 +135,14 @@ def inicializar_agente_analista(memory=None):
         return_messages=True,
     )
 
+    verbose = os.getenv("AGENT_VERBOSE", "false").strip().lower() in {"1", "true", "yes", "sim"}
+
     return create_pandas_dataframe_agent(
         llm=llm,
         df=df,
         extra_tools=AGENT_TOOLS,
         agent_executor_kwargs={"memory": memory},
-        verbose=True,
+        verbose=verbose,
         agent_type="tool-calling",
         prefix=instrucoes,
         allow_dangerous_code=True,

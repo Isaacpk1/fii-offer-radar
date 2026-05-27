@@ -1,151 +1,235 @@
 # BTG Scraper
 
-Pipeline em Python para acompanhar ofertas primarias de FIIs da Resolucao CVM 160, enriquecer os dados com cenario macroeconomico, comparar fundos listados e apoiar analises via dashboard Streamlit e agente de IA.
+Pipeline, warehouse, dashboard e agente de IA para triagem de ofertas primarias de FIIs da Resolucao CVM 160.
 
-## O que o projeto entrega
+O projeto centraliza dados oficiais da CVM, macroeconomia, informes mensais de FIIs, mercado secundario quando existe ticker mapeado, documentos de oferta, noticias e um copiloto analitico. Ele serve para priorizar analises, nao para substituir decisao de investimento.
 
-- Base de ofertas de FIIs registradas na CVM.
-- Indicadores macro por data da oferta: Selic, CDI, IPCA 12m, USD/BRL e IFIX quando a fonte tiver historico disponivel.
-- Monitor de mudancas de status das ofertas.
-- Informe mensal de FIIs com patrimonio, valor patrimonial por cota, cotistas e metricas operacionais quando disponiveis.
-- Dados de mercado via Yahoo Finance para fundos com ticker mapeado com alta confianca.
-- Base consolidada para comparar preco de emissao, preco de mercado, P/VP, liquidez e historico de ofertas.
-- Warehouse local DuckDB para consultas analiticas e controle de cobertura dos dados.
-- Dashboard Streamlit com filtros, rankings, graficos e copiloto de IA.
+## Principais Entregas
 
-## Estrutura
+- Ofertas primarias de FIIs registradas na CVM.
+- Enriquecimento macro por data da oferta: Selic, CDI, IPCA 12m, USD/BRL e IFIX quando disponivel.
+- Informe mensal de FIIs com VP/C, patrimonio, cotistas e metricas operacionais conforme cobertura da CVM.
+- Mapeamento CNPJ -> ticker com cache para buscar preco e liquidez B3 quando possivel.
+- Documentos de oferta: manifesto, download, parsing deterministico e extracao via LLM.
+- DY historico sobre preco de emissao e DY projetado quando encontrado em documentos.
+- Warehouse DuckDB com tabela principal `oferta_inteligencia`.
+- Score de priorizacao e sistema auditavel de confianca por oferta.
+- Dashboard Streamlit com abas de tese, mercado, ofertas, suporte FII, qualidade, tabelas e copiloto.
+- Agente LangChain/Gemini com tools de ranking, tese, noticias, qualidade, macro, brief e registro de decisao.
+
+## Limites Importantes
+
+- Preco B3, P/VP de mercado e liquidez so existem quando o ticker foi mapeado e a coleta de mercado funcionou.
+- Fundos sem B3 ainda podem ter dados uteis: VP/C, patrimonio, cotistas, rendimento historico e historico de ofertas.
+- DY projetado e dado prospectivo do emissor/documento de oferta, nao dado auditado.
+- Noticias sao contexto qualitativo best effort; sites podem bloquear scraping ou mudar layout.
+- O runner autonomo e manual/agendavel; nao roda como servico continuo por padrao.
+- `yfinance` atende prototipo/triagem, mas nao substitui fonte institucional de mercado.
+
+## Estrutura De Pastas
 
 ```text
-src/
-  main.py                         Orquestra o pipeline completo
-  ai_core/
-    agent.py                      Agente LangChain/Gemini sobre a base processada
-    tools.py                      Ferramentas auxiliares do agente
-  data/
-    raw/                          Arquivos brutos baixados das fontes externas
-    processed/                    Bases finais consumidas pelo app e pela IA
-  data_extraction/
-    cvm_extractor.py              Ofertas CVM 160
-    macro_extractor.py            Selic, CDI, IPCA, dolar e IFIX best effort
-    fii_informe_extractor.py      Informe mensal CVM de FIIs
-    fii_market_extractor.py       Preco e volume financeiro via yfinance
-    status_monitor.py             Snapshot e alertas de status
-    news/                         Scrapers de noticias de FIIs
-  data_processing/
-    cleaner.py                    Filtra ofertas de FIIs
-    enricher.py                   Cruza ofertas com macro e IFIX
-    fii_analyzer.py               Export opcional CSV de comparacao de FIIs
-  database/
-    schema.sql                    Modelo relacional do warehouse
-    build_database.py             Gera src/data/processed/fii_warehouse.duckdb
-  frontend/
-    app.py                        Dashboard Streamlit
+.
+|-- docs/
+|   |-- DATABASE.md
+|   |-- FILE_INVENTORY.md
+|   `-- PRODUCT_SCOPE.md
+|-- src/
+|   |-- main.py
+|   |-- ai_core/
+|   |   |-- agent.py
+|   |   |-- autonomous_runner.py
+|   |   |-- macro.py
+|   |   |-- schemas.py
+|   |   |-- tool_config.py
+|   |   |-- tools.py
+|   |   |-- tools_confidence.py
+|   |   |-- tools_ranking.py
+|   |   |-- tools_read.py
+|   |   |-- tools_write.py
+|   |   `-- warehouse.py
+|   |-- data/
+|   |   |-- raw/
+|   |   |-- processed/
+|   |   |-- alertas_autonomos/
+|   |   `-- briefs/
+|   |-- data_extraction/
+|   |   |-- cvm_extractor.py
+|   |   |-- fii_informe_extractor.py
+|   |   |-- fii_market_extractor.py
+|   |   |-- fii_ticker_mapper.py
+|   |   |-- macro_extractor.py
+|   |   |-- status_monitor.py
+|   |   |-- oferta_document_*.py
+|   |   `-- news/
+|   |       |-- b3_news.py
+|   |       |-- base_scraper.py
+|   |       |-- funds_explorer.py
+|   |       |-- infomoney.py
+|   |       |-- news_aggregator.py
+|   |       `-- valor_economico.py
+|   |-- data_processing/
+|   |   |-- cleaner.py
+|   |   |-- confidence_scorer.py
+|   |   |-- enricher.py
+|   |   |-- fii_analyzer.py
+|   |   `-- utils.py
+|   |-- database/
+|   |   |-- schema.sql
+|   |   |-- build_common.py
+|   |   |-- build_database.py
+|   |   |-- builders.py
+|   |   |-- *_builders.py
+|   |   `-- quality.py
+|   `-- frontend/
+|       |-- app.py
+|       |-- agent_session.py
+|       |-- components.py
+|       |-- config.py
+|       |-- data.py
+|       |-- formatters.py
+|       |-- styles.py
+|       |-- view_utils.py
+|       |-- views.py
+|       `-- views_*.py
+|-- pyproject.toml
+|-- requirements.txt
+`-- README.md
 ```
 
-## Bases geradas
+`src/data/` contem artefatos gerados localmente e fica fora do git.
 
-| Arquivo | Conteudo |
+## Tecnologias Usadas
+
+| Area | Tecnologias |
 | --- | --- |
-| `src/data/raw/oferta_resolucao_160_bruto.csv` | Base bruta de ofertas da CVM. |
-| `src/data/raw/macro_bcb_bruto.csv` | Series do Banco Central usadas no enriquecimento. |
-| `src/data/raw/ifix_bruto.csv` | IFIX via Yahoo Finance, quando a fonte retornar historico. |
-| `src/data/raw/informe_mensal_fii_<ano>.csv` | Informe mensal consolidado de FIIs. |
-| `src/data/raw/fii_mercado_bruto.csv` | Ticker, preco e volume medio dos FIIs mapeados. |
-| `src/data/processed/ofertas_fiis_pronto_para_ia.csv` | Base principal de ofertas para dashboard e IA. |
-| `src/data/processed/fii_analise_completa.csv` | Export opcional de comparacao de fundos, mercado e historico de emissoes. |
-| `src/data/processed/fii_warehouse.duckdb` | Banco analitico local com dimensoes, fatos, metricas e qualidade. |
-| `src/data/processed/status_monitor_alerts.json` | Mudancas de status detectadas na ultima execucao. |
+| Linguagem | Python 3.11+ |
+| Dados/tabular | pandas, numpy |
+| Warehouse | DuckDB, SQL |
+| Extracao HTTP | requests |
+| Mercado | yfinance |
+| Macro Brasil | python-bcb / SGS Banco Central |
+| Scraping JS | Playwright / Chromium |
+| PDF/documentos | pypdf |
+| Frontend | Streamlit |
+| Tabelas interativas | streamlit-aggrid, fallback para `st.dataframe` |
+| Graficos | Plotly Express, Plotly Graph Objects |
+| IA/agentes | LangChain, LangChain Classic, LangChain Experimental |
+| LLM | Google Gemini via `langchain-google-genai` |
+| Schemas/validacao | Pydantic |
+| Config local | python-dotenv, `.env` |
+| Packaging local | pyproject.toml, setuptools, `pip install -e .` |
+| Utilitario do agente Pandas | tabulate |
+| Automacao manual/agendada | `src/main.py`, `autonomous_runner.py`, Task Scheduler/cron |
 
 ## Instalacao
 
-```bash
+```powershell
 python -m venv venv
-venv\Scripts\activate
+.\venv\Scripts\activate
 pip install -r requirements.txt
+pip install -e .
 playwright install chromium
 ```
 
-Crie um arquivo `.env` na raiz com a chave do Gemini, se for usar o copiloto:
+Crie `.env` na raiz:
 
 ```env
 GOOGLE_API_KEY=sua_chave
+GEMINI_MODEL=gemini-2.5-flash
+AGENT_VERBOSE=false
 ```
 
-## Como executar
+## Execucao
 
 Pipeline completo:
 
-```bash
-python src/main.py
+```powershell
+.\venv\Scripts\python.exe src/main.py
 ```
 
-Dashboard:
+Forcar nova coleta:
 
-```bash
-streamlit run src/frontend/app.py
+```powershell
+.\venv\Scripts\python.exe src/main.py --force
 ```
 
-Etapas isoladas:
+Reconstruir apenas o warehouse:
 
-```bash
-python src/data_extraction/cvm_extractor.py
-python src/data_extraction/macro_extractor.py
-python src/data_extraction/fii_informe_extractor.py
-python src/data_processing/fii_analyzer.py
-python src/database/build_database.py
+```powershell
+.\venv\Scripts\python.exe src/database/build_database.py
 ```
 
-## Fluxo do pipeline
+Coletar noticias via Playwright:
 
-1. Baixa ofertas CVM 160, indicadores macro e IFIX.
-2. Baixa o informe mensal de FIIs do ano atual.
-3. Coleta noticias de FIIs quando os scrapers conseguem acessar as fontes.
-4. Filtra as ofertas cujo valor mobiliario e `Cotas de FII`.
-5. Cruza as ofertas com indicadores macro e IFIX pela data de requerimento.
-6. Busca dados de mercado dos FIIs com ticker conhecido.
-7. Consolida a analise dos fundos com P/VP, preco de emissao, liquidez e historico de ofertas.
-8. Gera o warehouse DuckDB em `src/data/processed/fii_warehouse.duckdb`.
-9. Atualiza o monitor de mudancas de status.
+```powershell
+.\venv\Scripts\python.exe -m data_extraction.news.news_aggregator
+```
 
-## Warehouse DuckDB
+Frontend:
 
-O warehouse organiza os CSVs em tabelas analiticas:
+```powershell
+.\venv\Scripts\streamlit.exe run src/frontend/app.py
+```
 
-| Tabela | Finalidade |
+Runner autonomo manual/agendavel:
+
+```powershell
+.\venv\Scripts\python.exe src/ai_core/autonomous_runner.py
+```
+
+## Fluxo Do Pipeline
+
+1. Baixa ofertas CVM 160, macro BCB e IFIX.
+2. Baixa informe mensal de FIIs do ano atual.
+3. Coleta noticias best effort via Playwright.
+4. Limpa e filtra ofertas de cotas de FII.
+5. Enriquece ofertas com macro e IFIX pela data.
+6. Verifica mudancas de status.
+7. Mapeia ticker por CNPJ e busca mercado B3 quando possivel.
+8. Consolida documentos, DY projetado/historico, score e confianca.
+9. Gera `src/data/processed/fii_warehouse.duckdb`.
+
+## Principais Tabelas
+
+| Tabela | Uso |
 | --- | --- |
-| `dim_fii` | Cadastro consolidado de fundos por CNPJ/ticker. |
-| `ofertas_cvm` | Ofertas primarias, status, volumes, coordenadores e macro na data da oferta. |
-| `fii_informe_mensal` | PL, VP/C, cotistas, ativos, passivos e taxas quando disponiveis. |
-| `fii_cotacoes` | Preco e liquidez financeira de mercado. |
-| `fii_rendimentos` | Estrutura preparada para dividendos e DY. |
-| `fii_portfolio` | Estrutura preparada para vacancia, imoveis e composicao de carteira. |
-| `macro_series` | Selic, CDI, IPCA, dolar e IFIX por data. |
-| `oferta_inteligencia` | Tese por oferta primaria: emissao vs B3, VP, liquidez, historico, macro e score. |
-| `fii_metricas` | Tabela final para comparacao de FIIs e ofertas. |
-| `data_quality_report` | Cobertura de dados por tabela e coluna. |
+| `ofertas_cvm` | Ofertas primarias, status, volumes, coordenadores e macro. |
+| `dim_fii` | Cadastro consolidado por CNPJ/ticker. |
+| `fii_informe_mensal` | VP/C, PL, cotistas e dados operacionais quando disponiveis. |
+| `fii_cotacoes` | Preco e liquidez para tickers mapeados. |
+| `fii_metricas` | Suporte do fundo para a tese da oferta. |
+| `oferta_projecoes` | DY projetado/historico e fontes documentais. |
+| `oferta_inteligencia` | Tese final por processo CVM. |
+| `noticias_fiis` | Noticias coletadas para contexto qualitativo. |
+| `data_quality_report` | Cobertura de dados por tabela/coluna. |
 
-Documentacao detalhada: `docs/DATABASE.md`.
-Analise de aderencia ao escopo TAPI: `docs/TAPI_ALIGNMENT.md`.
-Inventario de arquivos e criterio de limpeza: `docs/FILE_INVENTORY.md`.
+## Documentacao Complementar
 
-Exemplo de consulta:
+- `docs/DATABASE.md`: warehouse, tabelas e cobertura.
+- `docs/PRODUCT_SCOPE.md`: escopo do produto, limites e features reais.
+- `docs/FILE_INVENTORY.md`: inventario de arquivos e artefatos.
+
+## Exemplo DuckDB
 
 ```python
 import duckdb
 
 con = duckdb.connect("src/data/processed/fii_warehouse.duckdb")
 df = con.execute("""
-    SELECT numero_processo, ticker, preco_emissao, valor_cota_vpc,
-           p_vp_emissao, preco_cota_b3, desconto_vs_b3,
-           score_priorizacao, leitura_priorizacao
+    SELECT numero_processo, ticker, nome_emissor, preco_emissao,
+           valor_cota_vpc, p_vp_emissao, preco_cota_b3,
+           desconto_vs_b3, confianca_total, score_priorizacao
     FROM oferta_inteligencia
-    ORDER BY score_priorizacao DESC
+    ORDER BY score_priorizacao DESC NULLS LAST
+    LIMIT 20
 """).df()
 ```
 
-## Observacoes
+## Manutencao
 
-- Os scrapers de noticias dependem de Playwright e podem falhar quando os sites alteram layout, bloqueiam automacao ou exigem assinatura.
-- O mapeamento de tickers em `fii_market_extractor.py` e conservador: o codigo evita inventar tickers quando nao encontra correspondencia confiavel.
-- As bases em `src/data/` sao artefatos gerados pelo pipeline. Rode novamente o pipeline para atualizar o dashboard.
-- O agente de IA usa primeiro o warehouse `oferta_inteligencia` e ferramentas de ranking, tese da oferta, qualidade da base e macro. Ele executa codigo Pandas via LangChain; use apenas em ambiente controlado.
+- Pare o Streamlit antes de reconstruir o DuckDB se houver lock de arquivo.
+- Rode `src/database/build_database.py` quando schema ou builders mudarem.
+- Use `src/main.py --force` quando quiser atualizar fontes externas.
+- Reinstale browsers com `playwright install chromium` se os scrapers de noticias falharem por browser ausente.
+- O agente executa codigo Pandas via LangChain com `allow_dangerous_code=True`; use em ambiente controlado.

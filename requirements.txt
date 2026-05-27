@@ -1,16 +1,25 @@
+# Core de dados
 pandas
+numpy
 duckdb
 requests
 yfinance
 python-bcb
+
+# Frontend
 streamlit
 streamlit-aggrid
 plotly
+
+# IA / agentes
 python-dotenv
+pydantic
 langchain
 langchain-classic
 langchain-google-genai
 langchain-experimental
 tabulate
+
+# Scraping e documentos
 playwright
 pypdf

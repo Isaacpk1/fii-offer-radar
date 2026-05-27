@@ -8,6 +8,7 @@ from ai_core.warehouse import (
     _carregar_base_csv,
     _normalizar_df,
     _query_warehouse,
+    _select_existing_columns,
     _to_json,
     _tokens_busca,
     _warehouse_disponivel,
@@ -27,10 +28,12 @@ def consultar_tese_oferta(numero_processo: str) -> str:
     """Consulta a tese completa de uma oferta em oferta_inteligencia pelo numero de processo CVM."""
     try:
         processo = numero_processo.strip().upper()
-        cols = ", ".join(CORE_COLUMNS)
+        cols = _select_existing_columns("oferta_inteligencia", CORE_COLUMNS)
+        if not cols:
+            return "Tabela oferta_inteligencia sem colunas reconhecidas para consulta."
         df = _query_warehouse(
             f"""
-            SELECT {cols}
+            SELECT {", ".join(cols)}
             FROM oferta_inteligencia
             WHERE UPPER(CAST(numero_processo AS VARCHAR)) = ?
             """,

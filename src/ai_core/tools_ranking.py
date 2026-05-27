@@ -7,7 +7,7 @@ from langchain.tools import tool
 from ai_core.schemas import RankingOfertas
 from ai_core.tool_config import CORE_COLUMNS
 from ai_core.tools_read import buscar_macro_atual
-from ai_core.warehouse import _limite, _query_warehouse, _to_json
+from ai_core.warehouse import _limite, _query_warehouse, _select_existing_columns, _to_json
 
 
 @tool
@@ -15,10 +15,12 @@ def rankear_ofertas_prioritarias(limite: str = "10") -> str:
     """Lista ofertas com maior score de priorizacao, trazendo preco, P/VP, descontos, liquidez e cobertura."""
     try:
         n = _limite(limite, default=10, maximum=30)
-        cols = ", ".join(CORE_COLUMNS)
+        cols = _select_existing_columns("oferta_inteligencia", CORE_COLUMNS)
+        if not cols:
+            return "Tabela oferta_inteligencia sem colunas reconhecidas para ranking."
         df = _query_warehouse(
             f"""
-            SELECT {cols}
+            SELECT {", ".join(cols)}
             FROM oferta_inteligencia
             ORDER BY score_priorizacao DESC NULLS LAST,
                      cobertura_analise_percentual DESC NULLS LAST,
@@ -40,7 +42,7 @@ def rankear_com_diagnostico(limite: str = "5") -> str:
     """
     try:
         n = _limite(limite, default=5, maximum=15)
-        cols = [
+        desired_cols = [
             "numero_processo",
             "ticker",
             "nome_emissor",
@@ -61,6 +63,9 @@ def rankear_com_diagnostico(limite: str = "5") -> str:
             "confianca_resumo",
             "dados_ausentes_criticos",
         ]
+        cols = _select_existing_columns("oferta_inteligencia", desired_cols)
+        if not cols:
+            return "Tabela oferta_inteligencia sem colunas reconhecidas para ranking com diagnostico."
         df = _query_warehouse(
             f"""
             SELECT {", ".join(cols)}

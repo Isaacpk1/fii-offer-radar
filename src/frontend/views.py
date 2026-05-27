@@ -15,7 +15,6 @@ from frontend.views_fii import render_fii_compare
 from frontend.views_market import render_market
 from frontend.views_offers import render_offer_compare, render_offer_intelligence
 from frontend.views_quality import render_quality, render_warehouse_explorer
-from frontend.views_tapi import render_tapi_alignment
 
 __all__ = [
     "_extrair_json_resposta",
@@ -30,6 +29,5 @@ __all__ = [
     "render_offer_intelligence",
     "render_quality",
     "render_ranking_autonomo",
-    "render_tapi_alignment",
     "render_warehouse_explorer",
 ]

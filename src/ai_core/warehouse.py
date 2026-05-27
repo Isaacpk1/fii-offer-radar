@@ -19,6 +19,18 @@ def _query_warehouse(sql: str, params: list | None = None) -> pd.DataFrame:
         return con.execute(sql, params or []).df()
 
 
+def _table_columns(table: str) -> set[str]:
+    if not _warehouse_disponivel():
+        return set()
+    with duckdb.connect(str(WAREHOUSE_PATH), read_only=True) as con:
+        return set(con.execute(f"DESCRIBE {table}").df()["column_name"].astype(str))
+
+
+def _select_existing_columns(table: str, columns: list[str]) -> list[str]:
+    existing = _table_columns(table)
+    return [column for column in columns if column in existing]
+
+
 def _carregar_base_csv() -> pd.DataFrame:
     return pd.read_csv(CSV_PATH, sep=";", encoding="utf-8")
 

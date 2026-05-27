@@ -26,21 +26,38 @@ async def agregar_noticias(limite_por_fonte: int = 10) -> list[dict]:
     resultados = await asyncio.gather(*tarefas, return_exceptions=True)
 
     noticias = []
-    for resultado in resultados:
+    fontes_status = []
+    for scraper, resultado in zip(SCRAPERS, resultados):
+        fonte = scraper.__class__.__name__.replace("Scraper", "")
         if isinstance(resultado, Exception):
-            print(f"Aviso: um scraper falhou — {resultado}")
+            fontes_status.append({"fonte": fonte, "status": "erro", "quantidade": 0, "erro": str(resultado)})
+            print(f"Aviso: scraper {fonte} falhou - {resultado}")
             continue
-        noticias.extend([vars(n) for n in resultado])
+
+        quantidade = len(resultado)
+        status = "ok" if quantidade else "sem_noticias"
+        fontes_status.append({"fonte": fonte, "status": status, "quantidade": quantidade, "erro": ""})
+        print(f"Noticias {fonte}: {quantidade}")
+        noticias.extend([vars(noticia) for noticia in resultado])
 
     noticias.sort(key=lambda n: n.get("data", ""), reverse=True)
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(
-        json.dumps({"atualizado_em": datetime.now().isoformat(), "noticias": noticias},
-                   ensure_ascii=False, indent=2),
+        json.dumps(
+            {
+                "atualizado_em": datetime.now().isoformat(),
+                "fontes_status": fontes_status,
+                "noticias": noticias,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
         encoding="utf-8",
     )
 
+    if not noticias:
+        print("Aviso: nenhuma noticia foi coletada; contexto qualitativo ficara vazio.")
     print(f"{len(noticias)} noticias salvas em: {OUTPUT_PATH}")
     return noticias
 

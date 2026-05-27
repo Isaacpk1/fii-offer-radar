@@ -94,7 +94,7 @@ def render_header() -> None:
             </div>
             <div style="margin-top: 10px;">
                 <span class="status-pill status-ok">Fonte ativa: {source}</span>
-                <span class="status-pill">Projeto TAPI</span>
+                <span class="status-pill">Triagem de ofertas</span>
                 <span class="status-pill">Resolucao CVM 160</span>
                 <span class="status-pill">DY projetado separado do historico</span>
             </div>

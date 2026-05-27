@@ -17,7 +17,6 @@ from frontend.views import (
     render_offer_compare,
     render_offer_intelligence,
     render_quality,
-    render_tapi_alignment,
     render_warehouse_explorer,
 )
 
@@ -50,9 +49,8 @@ def main() -> None:
     else:
         oferta_inteligencia_filtrada = oferta_inteligencia
 
-    tab_tapi, tab_tese, tab_mercado, tab_ofertas, tab_fiis, tab_qualidade, tab_warehouse, tab_copiloto = st.tabs(
+    tab_tese, tab_mercado, tab_ofertas, tab_fiis, tab_qualidade, tab_warehouse, tab_copiloto = st.tabs(
         [
-            "TAPI",
             "Tese da Oferta",
             "Mercado",
             "Ofertas",
@@ -63,8 +61,6 @@ def main() -> None:
         ]
     )
 
-    with tab_tapi:
-        render_tapi_alignment(quality, ofertas_filtradas, metricas, oferta_inteligencia_filtrada)
     with tab_tese:
         render_offer_intelligence(oferta_inteligencia_filtrada)
     with tab_mercado:
