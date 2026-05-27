@@ -1,12 +1,16 @@
 pandas
+duckdb
 requests
 yfinance
-bcb
+python-bcb
 streamlit
 streamlit-aggrid
 plotly
 python-dotenv
+langchain
+langchain-classic
 langchain-google-genai
 langchain-experimental
 tabulate
 playwright
+pypdf

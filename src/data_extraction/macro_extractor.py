@@ -40,36 +40,34 @@ def obter_indicadores_macro(data_inicio="2023-01-01", data_fim="2026-12-31"):
         return None
 
 
-def obter_selic(data_inicio="01/01/2023", data_fim="31/12/2026"):
-    """Compatibilidade: obtem somente a serie Selic a partir do CSV macro."""
-    inicio_iso = pd.to_datetime(data_inicio, dayfirst=True).strftime("%Y-%m-%d")
-    fim_iso = pd.to_datetime(data_fim, dayfirst=True).strftime("%Y-%m-%d")
-    df_macro = obter_indicadores_macro(inicio_iso, fim_iso)
-    if df_macro is None:
-        return None
-    return df_macro[["data", "Taxa_Selic_Data_Oferta"]].rename(
-        columns={"Taxa_Selic_Data_Oferta": "valor"}
-    )
-
-
 def obter_ifix(data_inicio="2023-01-01", data_fim="2026-12-31"):
     """Obtem o historico do IFIX (Indice de Fundos Imobiliarios) via yfinance."""
     RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Obtendo dados do IFIX de {data_inicio} a {data_fim}...")
 
     try:
-        ticker = yf.Ticker("IFIX.SA")
-        ifix = ticker.history(start=data_inicio, end=data_fim)
+        ifix = pd.DataFrame()
+        fonte = None
+        for ticker_symbol in ["^IFIX", "IFIX.SA"]:
+            tentativa = yf.Ticker(ticker_symbol).history(start=data_inicio, end=data_fim)
+            if not tentativa.empty and len(tentativa) > len(ifix):
+                ifix = tentativa
+                fonte = ticker_symbol
+
+        if ifix.empty:
+            raise ValueError("Yahoo Finance nao retornou historico para ^IFIX nem IFIX.SA.")
+
         ifix.reset_index(inplace=True)
 
         if "Date" not in ifix.columns and "Datetime" in ifix.columns:
             ifix.rename(columns={"Datetime": "Date"}, inplace=True)
 
         ifix_clean = ifix[["Date", "Close"]].copy()
+        ifix_clean["Fonte"] = fonte
 
         caminho_saida = RAW_DATA_DIR / "ifix_bruto.csv"
         ifix_clean.to_csv(caminho_saida, index=False, sep=";")
-        print(f"Dados do IFIX salvos em: {caminho_saida}")
+        print(f"Dados do IFIX salvos em: {caminho_saida} ({len(ifix_clean)} registros; fonte {fonte})")
         return ifix_clean
     except Exception as e:
         print(f"Erro ao obter o IFIX: {e}")

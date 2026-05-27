@@ -23,7 +23,11 @@ def baixar_dados_cvm():
 
         with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
             arquivos_csv = [nome for nome in zf.namelist() if nome.endswith(".csv")]
-            arquivo_alvo = arquivos_csv[1]
+            candidatos = [
+                nome for nome in arquivos_csv
+                if "oferta_distribuicao" in nome.lower() or "oferta" in nome.lower()
+            ]
+            arquivo_alvo = candidatos[0] if candidatos else arquivos_csv[0]
             print(f"Extraindo o arquivo: {arquivo_alvo}")
 
             with zf.open(arquivo_alvo) as arquivo:

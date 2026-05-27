@@ -5,7 +5,10 @@ __pycache__/
 *.log
 .streamlit/
 
-# Dados grandes gerados pelo pipeline.
-# Remova os comentarios se quiser versionar os CSVs finais.
-# src/data/raw/*.csv
-# src/data/processed/*.csv
+# Dados gerados pelo pipeline.
+src/data/raw/*.csv
+src/data/processed/*.csv
+src/data/processed/*.json
+src/data/processed/*.duckdb
+!src/data/raw/.gitkeep
+!src/data/processed/.gitkeep
