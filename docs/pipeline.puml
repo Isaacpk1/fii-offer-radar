@@ -1,0 +1,98 @@
+@startuml
+title BTG Scraper - Fluxo simples da pipeline
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam rectangle {
+  RoundCorner 12
+}
+skinparam database {
+  RoundCorner 12
+}
+
+actor Usuario
+
+rectangle "1. Fontes extraidas" as Fontes {
+  rectangle "CVM\n- Ofertas CVM 160\n- Informes mensais FII\n- Documentos eventuais" as FonteCVM
+  rectangle "Banco Central SGS\n- Selic\n- CDI\n- IPCA 12m\n- USD/BRL" as FonteBCB
+  rectangle "Yahoo Finance\n- IFIX\n- Preco por ticker\n- Volume negociado" as FonteYahoo
+  rectangle "Fundamentus\n- Mapa CNPJ -> ticker" as FonteFundamentus
+  rectangle "Web\n- Noticias FIIs\n- Busca de PDFs\n- Bing / DuckDuckGo" as FonteWeb
+}
+
+rectangle "2. Como os dados sao extraidos" as Extracao {
+  rectangle "CVM\nrequests + zipfile + pandas\nBaixa ZIP/CSV oficial" as ExtraiCVM
+  rectangle "Macro\npython-bcb + yfinance\nConsulta SGS e IFIX" as ExtraiMacro
+  rectangle "Mercado\nrequests + regex + yfinance\nMapeia ticker e busca preco/volume" as ExtraiMercado
+  rectangle "Noticias\nPlaywright + Chromium headless\nScraping de paginas web" as ExtraiNoticias
+  rectangle "Documentos\nrequests + pypdf + SHA-256\nBusca, baixa e le PDFs" as ExtraiDocs
+}
+
+database "3. Dados brutos\nsrc/data/raw/\n\nArquivos CSV, JSON e PDFs baixados\nsem regra analitica forte ainda" as Raw
+
+rectangle "4. Tratamento dos dados" as Tratamento {
+  rectangle "Limpeza\npandas\nNormaliza colunas, datas e numeros" as Limpeza
+  rectangle "Filtro de escopo\npandas\nMantem Cotas de FII\ne Tipo_Oferta = PRIMARIA" as Filtro
+  rectangle "Enriquecimento\npandas merge_asof\nJunta macro, IFIX e status" as Enriquecimento
+  rectangle "Documentos com IA\npypdf + regex + Gemini\nExtrai DY, rendimento, taxa,\nindice/spread e confianca" as TratamentoDocs
+  rectangle "Score de confianca\npandas + pydantic\nAvalia dados, sinais e contexto" as Score
+}
+
+database "5. Dados processados\nsrc/data/processed/\n\nofertas_fiis_pronto_para_ia.csv\nnoticias_fiis.json\noferta_documentos_catalogo.csv\noferta_documentos_extracoes.csv\noferta_documentos_extracoes_llm.csv" as Processed
+
+rectangle "6. Carga no banco de dados" as Carga {
+  rectangle "build_database.py\nPython + pandas + SQL\nOrquestra a montagem do warehouse" as BuildDB
+  rectangle "Builders por dominio\n- ofertas\n- informes\n- mercado\n- documentos\n- inteligencia\n- qualidade" as Builders
+}
+
+database "7. Banco analitico\nDuckDB local\nsrc/data/processed/fii_warehouse.duckdb\n\nTabelas principais:\nofertas_cvm\ndim_fii\nfii_metricas\nmacro_series\nnoticias_fiis\noferta_projecoes\noferta_inteligencia\ndata_quality_report\ndecisoes_analista" as DuckDB
+
+rectangle "8. Como aparece na interface" as Interface {
+  rectangle "Streamlit\nLe o DuckDB com duckdb + pandas" as StreamlitLoad
+  rectangle "Abas visuais\nTese da Oferta\nMercado\nOfertas\nSuporte FII\nQualidade\nTabelas" as StreamlitTabs
+  rectangle "Graficos e tabelas\nplotly + streamlit-aggrid\ncom fallback para st.dataframe" as Visualizacao
+  rectangle "Copiloto IA\nLangChain + Gemini\nConsulta o DuckDB,\nrankeia ofertas e gera briefs" as Copiloto
+}
+
+rectangle "main.py\nOrquestra o fluxo\n\npython src/main.py --force\npython src/main.py --docs\npython src/main.py --docs-ia" as Main
+
+Usuario --> Main : roda a pipeline
+
+FonteCVM --> ExtraiCVM
+FonteBCB --> ExtraiMacro
+FonteYahoo --> ExtraiMacro
+FonteYahoo --> ExtraiMercado
+FonteFundamentus --> ExtraiMercado
+FonteWeb --> ExtraiNoticias
+FonteWeb --> ExtraiDocs
+FonteCVM --> ExtraiDocs
+
+ExtraiCVM --> Raw
+ExtraiMacro --> Raw
+ExtraiMercado --> Raw
+ExtraiNoticias --> Processed
+ExtraiDocs --> Raw
+
+Raw --> Limpeza
+Limpeza --> Filtro
+Filtro --> Enriquecimento
+Enriquecimento --> Score
+Raw --> TratamentoDocs
+TratamentoDocs --> Processed
+Score --> Processed
+
+Processed --> BuildDB
+Raw --> BuildDB
+BuildDB --> Builders
+Builders --> DuckDB
+
+DuckDB --> StreamlitLoad
+StreamlitLoad --> StreamlitTabs
+StreamlitLoad --> Visualizacao
+DuckDB --> Copiloto
+
+Main ..> Extracao
+Main ..> Tratamento
+Main ..> Carga
+
+@enduml
