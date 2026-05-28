@@ -34,7 +34,7 @@ macro e qualidade dos dados?
 | Confianca auditavel | Implementado | Score de dados, sinais e contexto. |
 | Noticias | Parcial | Contexto qualitativo best effort. |
 | Agente IA | Implementado | Copiloto com tools e output estruturado em rankings. |
-| Runner autonomo | Manual/agendavel | Existe script, nao roda como servico continuo. |
+| Runner autonomo | Manual/agendavel | Script executa triagem e grava alertas; pode rodar em loop ou por agendamento externo. |
 | Status monitor | Batch | Roda no pipeline e grava estado/alertas. |
 
 ## Abas Do Dashboard
@@ -71,13 +71,19 @@ O DY projetado deve ser tratado como guidance/documento do emissor, nao como dad
 O projeto tem duas pecas de automacao:
 
 - `status_monitor.py`: compara status atual com snapshot anterior durante o pipeline.
-- `autonomous_runner.py`: executa tarefas do agente e grava alertas quando chamado manualmente ou por agendamento externo.
+- `autonomous_runner.py`: executa tarefas do agente, grava alertas e pode enviar e-mail se SMTP estiver configurado.
 
-Nenhuma das duas roda continuamente sem agendamento. Para execucao diaria, use Task Scheduler/cron chamando:
+Nenhuma delas e instalada como servico automaticamente. Para execucao diaria, use Task Scheduler/cron chamando:
 
 ```powershell
 .\venv\Scripts\python.exe src/main.py --force
-.\venv\Scripts\python.exe src/ai_core/autonomous_runner.py
+.\venv\Scripts\python.exe src/ai_core/autonomous_runner.py --send-email
+```
+
+Tambem existe modo loop local:
+
+```powershell
+.\venv\Scripts\python.exe src/ai_core/autonomous_runner.py --loop --interval-minutes 1440 --send-email
 ```
 
 ## Criterio De Uso

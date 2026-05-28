@@ -63,7 +63,6 @@ src/data/processed/
 Exemplos:
 
 - `ofertas_fiis_pronto_para_ia.csv`
-- `fii_analise_completa.csv` (export opcional; o warehouse calcula as metricas diretamente)
 - `fii_warehouse.duckdb`
 
 ### Warehouse

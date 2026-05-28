@@ -28,6 +28,9 @@ from data_extraction import cvm_extractor, macro_extractor
 from data_extraction.news import news_aggregator
 from data_extraction import status_monitor
 from data_extraction import fii_informe_extractor, fii_market_extractor
+from data_extraction import oferta_document_downloader
+from data_extraction import oferta_document_extractor
+from data_extraction import oferta_document_llm_extractor
 from data_processing import cleaner, enricher
 from database import build_database
 
@@ -102,7 +105,53 @@ def _warehouse_schema_atualizado(path: Path = WAREHOUSE_PATH) -> bool:
         return False
 
 
-def executar_pipeline(forcar_atualizacao: bool = False):
+def _executar_pipeline_documentos(
+    *,
+    limite: int | None = 10,
+    max_documentos_por_oferta: int = 2,
+    max_paginas: int | None = None,
+    ano_minimo: int | None = 2026,
+    usar_ia: bool = False,
+) -> bool:
+    """Roda a etapa opcional de documentos de oferta e retorna se houve atualizacao."""
+    atualizou = False
+
+    try:
+        catalogo = oferta_document_downloader.baixar_documentos_ofertas(
+            limite=limite,
+            max_documentos_por_oferta=max_documentos_por_oferta,
+            ano_minimo=ano_minimo,
+        )
+        atualizou = atualizou or catalogo is not None
+    except Exception as exc:
+        print(f"Aviso: download/catalogacao de documentos falhou: {exc}")
+        return atualizou
+
+    try:
+        extracoes = oferta_document_extractor.extrair_documentos_ofertas(max_paginas=max_paginas)
+        atualizou = atualizou or extracoes is not None
+    except Exception as exc:
+        print(f"Aviso: extracao deterministica de documentos falhou: {exc}")
+
+    if usar_ia:
+        try:
+            extracoes_llm = oferta_document_llm_extractor.extrair_documentos_com_llm(limite=limite)
+            atualizou = atualizou or extracoes_llm is not None
+        except Exception as exc:
+            print(f"Aviso: extracao de documentos com IA falhou: {exc}")
+
+    return atualizou
+
+
+def executar_pipeline(
+    forcar_atualizacao: bool = False,
+    executar_documentos: bool = False,
+    documentos_com_ia: bool = False,
+    documentos_limite: int | None = 10,
+    documentos_max_docs: int = 2,
+    documentos_max_paginas: int | None = None,
+    documentos_ano_minimo: int | None = 2026,
+):
     print("Iniciando o pipeline de dados do BTG Pactual...")
     alguma_fonte_atualizada = False
 
@@ -118,7 +167,7 @@ def executar_pipeline(forcar_atualizacao: bool = False):
         alguma_fonte_atualizada |= _extrair_se_necessario(
             "Indicadores macro BCB",
             macro_extractor.obter_indicadores_macro,
-            [RAW_DATA_DIR / "macro_bcb_bruto.csv", RAW_DATA_DIR / "selic_bruto.csv"],
+            [RAW_DATA_DIR / "macro_bcb_bruto.csv"],
             obrigatorio=True,
             forcar=forcar_atualizacao,
         )
@@ -212,6 +261,23 @@ def executar_pipeline(forcar_atualizacao: bool = False):
         except Exception as e:
             print(f"Aviso: geracao do warehouse DuckDB falhou: {e}")
 
+    if executar_documentos:
+        print("\n--- Fase 5: Documentos de oferta e IA ---")
+        documentos_atualizados = _executar_pipeline_documentos(
+            limite=documentos_limite,
+            max_documentos_por_oferta=documentos_max_docs,
+            max_paginas=documentos_max_paginas,
+            ano_minimo=documentos_ano_minimo,
+            usar_ia=documentos_com_ia,
+        )
+        if documentos_atualizados:
+            try:
+                build_database.build_database()
+            except Exception as e:
+                print(f"Aviso: rebuild do warehouse apos documentos falhou: {e}")
+        else:
+            print("Documentos: nenhuma atualizacao aplicada.")
+
     print("\nPipeline de dados concluido com sucesso.")
     print("A base final foi gerada para consumo pelo frontend e pelo agente de IA.")
 
@@ -223,5 +289,47 @@ if __name__ == "__main__":
         action="store_true",
         help="Forca nova coleta mesmo quando os arquivos de saida ja foram gerados hoje.",
     )
+    parser.add_argument(
+        "--docs",
+        action="store_true",
+        help="Executa tambem a pipeline de documentos de oferta: manifesto, download e extracao por PDF.",
+    )
+    parser.add_argument(
+        "--docs-ia",
+        action="store_true",
+        help="Executa a extracao de documentos com Gemini depois da extracao deterministica.",
+    )
+    parser.add_argument(
+        "--docs-limite",
+        type=int,
+        default=10,
+        help="Numero maximo de ofertas a processar na etapa de documentos.",
+    )
+    parser.add_argument(
+        "--docs-max-docs",
+        type=int,
+        default=2,
+        help="Numero maximo de PDFs a baixar por oferta.",
+    )
+    parser.add_argument(
+        "--docs-max-paginas",
+        type=int,
+        default=None,
+        help="Limita o numero de paginas lidas por PDF na extracao deterministica.",
+    )
+    parser.add_argument(
+        "--docs-ano-minimo",
+        type=int,
+        default=2026,
+        help="Ano minimo da data de requerimento para buscar documentos.",
+    )
     args = parser.parse_args()
-    executar_pipeline(forcar_atualizacao=args.force)
+    executar_pipeline(
+        forcar_atualizacao=args.force,
+        executar_documentos=args.docs or args.docs_ia,
+        documentos_com_ia=args.docs_ia,
+        documentos_limite=args.docs_limite,
+        documentos_max_docs=args.docs_max_docs,
+        documentos_max_paginas=args.docs_max_paginas,
+        documentos_ano_minimo=args.docs_ano_minimo,
+    )

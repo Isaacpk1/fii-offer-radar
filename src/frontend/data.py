@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from frontend.config import ANALISE_FII_PATH, OFERTAS_PATH, WAREHOUSE_PATH
+from frontend.config import OFERTAS_PATH, WAREHOUSE_PATH
 
 try:
     import duckdb
@@ -86,24 +86,6 @@ def load_ofertas() -> pd.DataFrame:
 
 def load_metricas() -> pd.DataFrame:
     df = load_table("fii_metricas")
-    if df.empty:
-        df = load_csv(ANALISE_FII_PATH)
-        rename = {
-            "CNPJ_Fundo": "cnpj",
-            "Ticker": "ticker",
-            "Patrimonio_Liquido": "patrimonio_liquido",
-            "Valor_Cota_VPC": "valor_cota_vpc",
-            "Preco_Cota": "preco_cota",
-            "P_VP": "p_vp",
-            "Preco_Emissao": "preco_emissao",
-            "Volume_Medio_Diario": "volume_medio_diario",
-            "Total_Emissoes": "total_emissoes",
-            "Volume_Total_Ofertas": "volume_total_ofertas",
-            "Coordenador_Principal": "coordenador_principal",
-            "Numero_Cotistas": "numero_cotistas",
-            "Status_Viabilidade_Oferta": "status_viabilidade_oferta",
-        }
-        df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
 
     for col in [
         "patrimonio_liquido",

@@ -7,7 +7,6 @@ PROJECT_ROOT = SRC_DIR.parent
 PROCESSED_DATA_DIR = SRC_DIR / "data" / "processed"
 WAREHOUSE_PATH = PROCESSED_DATA_DIR / "fii_warehouse.duckdb"
 OFERTAS_PATH = PROCESSED_DATA_DIR / "ofertas_fiis_pronto_para_ia.csv"
-ANALISE_FII_PATH = PROCESSED_DATA_DIR / "fii_analise_completa.csv"
 STATUS_ALERTS_PATH = PROCESSED_DATA_DIR / "status_monitor_alerts.json"
 
 if str(SRC_DIR) not in sys.path:

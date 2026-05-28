@@ -4,19 +4,25 @@ Runner autonomo do agente de FIIs.
 Execute:
     python src/ai_core/autonomous_runner.py
 
-Agendamento exemplo:
-    0 7 * * 1-5 python /path/src/ai_core/autonomous_runner.py
+Opcoes:
+    python src/ai_core/autonomous_runner.py --send-email
+    python src/ai_core/autonomous_runner.py --loop --interval-minutes 1440
 """
 
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import smtplib
 import sys
+import time
 from datetime import datetime
 from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Any
+
+from dotenv import load_dotenv
 
 
 SRC_DIR = Path(__file__).resolve().parents[1]
@@ -25,6 +31,8 @@ if str(SRC_DIR) not in sys.path:
 
 from ai_core.agent import inicializar_agente_analista
 
+
+load_dotenv()
 
 ALERTAS_DIR = Path(__file__).resolve().parents[1] / "data" / "alertas_autonomos"
 ALERTAS_DIR.mkdir(parents=True, exist_ok=True)
@@ -77,10 +85,28 @@ def _extrair_json(texto: str) -> dict[str, Any]:
     return json.loads(cleaned)
 
 
+def _resposta_para_texto(resposta: Any) -> str:
+    if isinstance(resposta, dict):
+        output = resposta.get("output", resposta)
+    else:
+        output = resposta
+    if isinstance(output, str):
+        return output
+    if isinstance(output, list):
+        partes = []
+        for item in output:
+            if isinstance(item, dict):
+                partes.append(str(item.get("text") or item.get("content") or item))
+            else:
+                partes.append(str(item))
+        return "\n".join(partes)
+    return str(output)
+
+
 def executar_tarefa(agente, tarefa: dict[str, str]) -> dict[str, Any]:
     print(f"[{datetime.now():%H:%M}] Executando: {tarefa['nome']}")
     resposta = agente.invoke({"input": tarefa["prompt"]})
-    texto = resposta.get("output", "")
+    texto = _resposta_para_texto(resposta)
 
     try:
         resultado = _extrair_json(texto)
@@ -101,10 +127,29 @@ def salvar_alerta(resultado: dict[str, Any]) -> Path:
     return caminho
 
 
-def enviar_email_alerta(resultado: dict[str, Any], destinatario: str, smtp_config: dict[str, Any]) -> None:
+def _carregar_smtp_config() -> dict[str, Any] | None:
+    host = os.getenv("SMTP_HOST", "").strip()
+    port = os.getenv("SMTP_PORT", "").strip()
+    sender = os.getenv("SMTP_FROM", "").strip()
+    to = os.getenv("ALERT_EMAIL_TO", "").strip()
+    if not all([host, port, sender, to]):
+        return None
+
+    return {
+        "host": host,
+        "port": int(port),
+        "from": sender,
+        "to": to,
+        "username": os.getenv("SMTP_USERNAME", "").strip(),
+        "password": os.getenv("SMTP_PASSWORD", "").strip(),
+        "use_tls": os.getenv("SMTP_USE_TLS", "true").strip().lower() in {"1", "true", "yes", "sim"},
+    }
+
+
+def enviar_email_alerta(resultado: dict[str, Any], smtp_config: dict[str, Any]) -> bool:
     alertas = resultado.get("resultado", {}).get("alertas_urgentes", [])
     if not alertas:
-        return
+        return False
 
     corpo = f"Alertas automaticos FII - {datetime.now():%d/%m/%Y}\n\n"
     for alerta in alertas:
@@ -113,23 +158,52 @@ def enviar_email_alerta(resultado: dict[str, Any], destinatario: str, smtp_confi
     msg = MIMEText(corpo)
     msg["Subject"] = f"[FII-Agent] {len(alertas)} alerta(s) urgente(s)"
     msg["From"] = smtp_config["from"]
-    msg["To"] = destinatario
+    msg["To"] = smtp_config["to"]
 
     with smtplib.SMTP(smtp_config["host"], smtp_config["port"]) as smtp:
-        smtp.sendmail(smtp_config["from"], destinatario, msg.as_string())
+        if smtp_config.get("use_tls"):
+            smtp.starttls()
+        if smtp_config.get("username") and smtp_config.get("password"):
+            smtp.login(smtp_config["username"], smtp_config["password"])
+        smtp.sendmail(smtp_config["from"], smtp_config["to"], msg.as_string())
+    return True
 
 
-def run() -> None:
+def run_once(send_email: bool = False) -> list[Path]:
     print(f"=== Runner autonomo iniciado: {datetime.now():%Y-%m-%d %H:%M} ===")
     agente = inicializar_agente_analista()
+    smtp_config = _carregar_smtp_config() if send_email else None
+    arquivos = []
 
     for tarefa in TAREFAS_DIARIAS:
         resultado = executar_tarefa(agente, tarefa)
         caminho = salvar_alerta(resultado)
+        arquivos.append(caminho)
         print(f"  Salvo: {caminho}")
+        if smtp_config and enviar_email_alerta(resultado, smtp_config):
+            print(f"  E-mail enviado para {smtp_config['to']}")
+        elif send_email and tarefa["nome"] == "triagem_diaria" and smtp_config is None:
+            print("  E-mail nao enviado: configure SMTP_HOST, SMTP_PORT, SMTP_FROM e ALERT_EMAIL_TO.")
 
     print("=== Runner concluido ===")
+    return arquivos
+
+
+def run(loop: bool = False, interval_minutes: int = 1440, send_email: bool = False) -> None:
+    if not loop:
+        run_once(send_email=send_email)
+        return
+
+    while True:
+        run_once(send_email=send_email)
+        print(f"Proxima execucao em {interval_minutes} minuto(s).")
+        time.sleep(max(1, interval_minutes) * 60)
 
 
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser(description="Runner autonomo/agendavel do agente de FIIs.")
+    parser.add_argument("--loop", action="store_true", help="Mantem o runner em execucao continua.")
+    parser.add_argument("--interval-minutes", type=int, default=1440, help="Intervalo do loop em minutos.")
+    parser.add_argument("--send-email", action="store_true", help="Envia e-mail quando houver alertas urgentes.")
+    args = parser.parse_args()
+    run(loop=args.loop, interval_minutes=args.interval_minutes, send_email=args.send_email)

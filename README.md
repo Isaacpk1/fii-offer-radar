@@ -72,7 +72,6 @@ O projeto centraliza dados oficiais da CVM, macroeconomia, informes mensais de F
 |   |   |-- cleaner.py
 |   |   |-- confidence_scorer.py
 |   |   |-- enricher.py
-|   |   |-- fii_analyzer.py
 |   |   `-- utils.py
 |   |-- database/
 |   |   |-- schema.sql
@@ -138,6 +137,15 @@ Crie `.env` na raiz:
 GOOGLE_API_KEY=sua_chave
 GEMINI_MODEL=gemini-2.5-flash
 AGENT_VERBOSE=false
+
+# Opcional: envio de alertas por e-mail no autonomous_runner.py
+SMTP_HOST=smtp.seuprovedor.com
+SMTP_PORT=587
+SMTP_USE_TLS=true
+SMTP_FROM=alertas@empresa.com
+SMTP_USERNAME=alertas@empresa.com
+SMTP_PASSWORD=sua_senha_ou_app_password
+ALERT_EMAIL_TO=analista@empresa.com
 ```
 
 ## Execucao
@@ -176,6 +184,32 @@ Runner autonomo manual/agendavel:
 
 ```powershell
 .\venv\Scripts\python.exe src/ai_core/autonomous_runner.py
+```
+
+Runner com e-mail, se SMTP estiver configurado:
+
+```powershell
+.\venv\Scripts\python.exe src/ai_core/autonomous_runner.py --send-email
+```
+
+Runner em loop local:
+
+```powershell
+.\venv\Scripts\python.exe src/ai_core/autonomous_runner.py --loop --interval-minutes 1440 --send-email
+```
+
+Exemplo de cron em Linux:
+
+```cron
+0 7 * * 1-5 cd /caminho/btg_scraper && .venv/bin/python src/ai_core/autonomous_runner.py --send-email
+```
+
+No Windows, configure o Task Scheduler para executar:
+
+```text
+Programa: C:\caminho\btg_scraper\venv\Scripts\python.exe
+Argumentos: src/ai_core/autonomous_runner.py --send-email
+Iniciar em: C:\caminho\btg_scraper
 ```
 
 ## Fluxo Do Pipeline

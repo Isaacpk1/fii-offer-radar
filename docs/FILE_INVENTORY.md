@@ -32,7 +32,7 @@ Este documento separa codigo-fonte, documentacao e artefatos gerados. A regra ge
 | `src/ai_core/tools_ranking.py` | Essencial | Tools de ranking e output estruturado. |
 | `src/ai_core/tools_write.py` | Util | Briefs e registro de decisoes. |
 | `src/ai_core/tools_confidence.py` | Essencial | Avaliacao auditavel de confianca por oferta. |
-| `src/ai_core/autonomous_runner.py` | Util | Runner manual/agendavel de alertas; nao roda em background por padrao. |
+| `src/ai_core/autonomous_runner.py` | Util | Runner manual/agendavel de alertas; suporta loop local e e-mail via SMTP opcional. |
 | `src/data_extraction/cvm_extractor.py` | Essencial | Baixa ofertas CVM 160. |
 | `src/data_extraction/macro_extractor.py` | Essencial | Baixa Selic, CDI, IPCA, USD/BRL e IFIX. |
 | `src/data_extraction/fii_informe_extractor.py` | Essencial | Baixa informe mensal FII, incluindo VP/C, PL e cotistas via complemento CVM. |
@@ -43,7 +43,6 @@ Este documento separa codigo-fonte, documentacao e artefatos gerados. A regra ge
 | `src/data_extraction/news/` | Util | Scrapers best effort de noticias; usados pelo pipeline, mas podem falhar por layout/bloqueio dos sites. |
 | `src/data_processing/cleaner.py` | Essencial | Filtra ofertas de FIIs da base CVM. |
 | `src/data_processing/enricher.py` | Essencial | Cruza ofertas com macro, IFIX e historico de status. |
-| `src/data_processing/fii_analyzer.py` | Util | Gera export CSV opcional de comparacao de fundos; o warehouse ja calcula as metricas diretamente. |
 | `src/database/schema.sql` | Essencial | Schema do warehouse. |
 | `src/database/build_database.py` | Essencial | Gera `fii_warehouse.duckdb`, incluindo `oferta_inteligencia`. |
 | `src/database/*_builders.py` | Essencial | Builders modulares do warehouse por dominio. |
@@ -59,12 +58,10 @@ Estes arquivos sao uteis localmente, mas nao devem ser versionados.
 | --- | --- | --- |
 | `src/data/raw/oferta_resolucao_160_bruto.csv` | `cvm_extractor.py` | Fonte bruta de ofertas CVM. |
 | `src/data/raw/macro_bcb_bruto.csv` | `macro_extractor.py` | Series macro principais. |
-| `src/data/raw/selic_bruto.csv` | `macro_extractor.py` | Compatibilidade com versoes antigas. |
 | `src/data/raw/ifix_bruto.csv` | `macro_extractor.py` | Historico IFIX. |
 | `src/data/raw/informe_mensal_fii_<ano>.csv` | `fii_informe_extractor.py` | Informe mensal consolidado de FIIs. |
 | `src/data/raw/fii_mercado_bruto.csv` | `fii_market_extractor.py` | Preco e liquidez dos tickers mapeados. |
 | `src/data/processed/ofertas_fiis_pronto_para_ia.csv` | `enricher.py` | Base processada para dashboard e agente. |
-| `src/data/processed/fii_analise_completa.csv` | `fii_analyzer.py` | Export opcional comparativo de fundos. |
 | `src/data/processed/fii_warehouse.duckdb` | `build_database.py` | Banco analitico local. |
 | `src/data/processed/noticias_fiis.json` | `news_aggregator.py` | Noticias coletadas. |
 | `src/data/processed/status_monitor_*.json` | `status_monitor.py` | Estado e alertas de status. |
@@ -83,7 +80,7 @@ Estes arquivos sao uteis localmente, mas nao devem ser versionados.
 ## Convencao De Nomes
 
 - Extratores: `*_extractor.py`
-- Processadores: nomes de acao/etapa, como `cleaner.py`, `enricher.py`; exports opcionais podem ficar em arquivos auxiliares como `fii_analyzer.py`
+- Processadores: nomes de acao/etapa, como `cleaner.py` e `enricher.py`.
 - Banco: `src/database/schema.sql` e `src/database/build_database.py`
 - Dados brutos: `src/data/raw/*_bruto.csv`
 - Dados finais: `src/data/processed/*`

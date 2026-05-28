@@ -28,11 +28,6 @@ def obter_indicadores_macro(data_inicio="2023-01-01", data_fim="2026-12-31"):
         caminho_saida = RAW_DATA_DIR / "macro_bcb_bruto.csv"
         df_macro.to_csv(caminho_saida, index=False, sep=";")
 
-        # Mantem compatibilidade com versoes anteriores do pipeline.
-        df_macro[["data", "Taxa_Selic_Data_Oferta"]].rename(
-            columns={"Taxa_Selic_Data_Oferta": "valor"}
-        ).to_csv(RAW_DATA_DIR / "selic_bruto.csv", index=False, sep=";")
-
         print(f"Indicadores macro salvos em: {caminho_saida}")
         return df_macro
     except Exception as e:

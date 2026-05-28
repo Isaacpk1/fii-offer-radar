@@ -23,13 +23,8 @@ COLUNAS_MACRO = [
 
 def _carregar_macro() -> pd.DataFrame:
     caminho_macro = RAW_DATA_DIR / "macro_bcb_bruto.csv"
-    if caminho_macro.exists():
-        df_macro = pd.read_csv(caminho_macro, sep=";")
-        df_macro["data"] = pd.to_datetime(df_macro["data"], errors="coerce")
-    else:
-        df_selic = pd.read_csv(RAW_DATA_DIR / "selic_bruto.csv", sep=";")
-        df_selic["data"] = pd.to_datetime(df_selic["data"], errors="coerce")
-        df_macro = df_selic.rename(columns={"valor": "Taxa_Selic_Data_Oferta"})
+    df_macro = pd.read_csv(caminho_macro, sep=";")
+    df_macro["data"] = pd.to_datetime(df_macro["data"], errors="coerce")
 
     for coluna in COLUNAS_MACRO:
         if coluna in df_macro.columns:
