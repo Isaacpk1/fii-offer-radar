@@ -8,9 +8,9 @@ def formatar_moeda(valor: float | int | None) -> str:
         return "N/D"
     valor = float(valor)
     if abs(valor) >= 1_000_000_000:
-        return f"R$ {valor / 1_000_000_000:.2f} bi"
+        return f"R$ {valor / 1_000_000_000:.2f} bi".replace(".", ",")
     if abs(valor) >= 1_000_000:
-        return f"R$ {valor / 1_000_000:.2f} mi"
+        return f"R$ {valor / 1_000_000:.2f} mi".replace(".", ",")
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
