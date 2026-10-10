@@ -11,7 +11,7 @@ STATUS_ALERTS_PATH = PROCESSED_DATA_DIR / "status_monitor_alerts.json"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-BTG_BLUE = "#002F6C"
+BRAND_BLUE = "#002F6C"
 INK = "#172033"
 MUTED = "#667085"
 LINE = "#D9E2EC"

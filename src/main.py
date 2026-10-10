@@ -155,7 +155,7 @@ def executar_pipeline(
     documentos_max_paginas: int | None = None,
     documentos_ano_minimo: int | None = 2026,
 ):
-    print("Iniciando o pipeline de dados do BTG Pactual...")
+    print("Iniciando o pipeline do FII Offer Radar...")
     alguma_fonte_atualizada = False
 
     print("\n--- Fase 1: Extracao de fontes ---")

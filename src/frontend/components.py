@@ -87,7 +87,7 @@ def render_header() -> None:
     st.markdown(
         f"""
         <div class="top-band">
-            <p class="top-title">Primary FII Offers Intelligence | BTG Pactual</p>
+            <p class="top-title">FII Offer Radar | Ofertas primarias de FIIs</p>
             <div class="top-subtitle">
                 Mesa de decisao para ofertas primarias de FIIs: emissao versus B3, valor patrimonial,
                 liquidez, historico, macro e DY projetado da oferta.

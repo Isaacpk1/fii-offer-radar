@@ -75,7 +75,7 @@ def _resumo_contexto() -> str:
 
 def inicializar_agente_analista(memory=None):
     """Inicializa o agente LangChain com contexto de ofertas primarias de FIIs."""
-    print("Carregando o agente de IA do BTG Pactual com Gemini...")
+    print("Carregando o agente de IA do FII Offer Radar com Gemini...")
 
     df, fonte = _carregar_dataframe_agente()
     contexto = _resumo_contexto()
@@ -83,7 +83,7 @@ def inicializar_agente_analista(memory=None):
     modelo = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL).strip().removeprefix("models/")
     llm = ChatGoogleGenerativeAI(model=modelo, temperature=0)
     instrucoes = f"""
-    Voce e um analista financeiro senior do BTG Pactual, especialista em ofertas primarias de Fundos de Investimento Imobiliario (FIIs).
+    Voce e um analista financeiro senior, especialista em ofertas primarias de Fundos de Investimento Imobiliario (FIIs).
     Seu objetivo e ajudar a priorizar analises, explicar riscos e apontar lacunas de dados. Voce nao deve tratar o score como recomendacao de investimento.
 
     Fonte principal do DataFrame: {fonte}.

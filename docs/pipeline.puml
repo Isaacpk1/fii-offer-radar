@@ -1,5 +1,5 @@
 @startuml
-title BTG Scraper - Fluxo simples da pipeline
+title FII Offer Radar - Fluxo do pipeline
 
 skinparam shadowing false
 skinparam defaultFontName Arial

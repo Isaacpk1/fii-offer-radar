@@ -3,7 +3,7 @@ import plotly.express as px
 import streamlit as st
 
 from frontend.components import tabela_interativa
-from frontend.config import BTG_BLUE, TEAL
+from frontend.config import BRAND_BLUE, TEAL
 
 
 def _rotulo_fii(row: pd.Series) -> str:
@@ -87,7 +87,7 @@ def render_fii_compare(metricas: pd.DataFrame) -> None:
                 barmode="group",
                 title="Preco B3 vs preco de emissao",
                 labels={"valor": "Preco", "rotulo_fii": "Fundo"},
-                color_discrete_map={"preco_cota": BTG_BLUE, "preco_emissao": TEAL},
+                color_discrete_map={"preco_cota": BRAND_BLUE, "preco_emissao": TEAL},
             )
             fig.update_layout(height=390, margin={"l": 10, "r": 10, "t": 48, "b": 20})
             st.plotly_chart(fig, use_container_width=True)
@@ -101,7 +101,7 @@ def render_fii_compare(metricas: pd.DataFrame) -> None:
                 y="rotulo_fii",
                 orientation="h",
                 title="Liquidez media diaria",
-                color_discrete_sequence=[BTG_BLUE],
+                color_discrete_sequence=[BRAND_BLUE],
                 labels={"volume_medio_diario": "Volume medio", "rotulo_fii": "Fundo"},
             )
             fig.update_layout(height=390, margin={"l": 10, "r": 10, "t": 48, "b": 20})

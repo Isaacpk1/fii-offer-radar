@@ -1,12 +1,12 @@
 import streamlit as st
 
-from frontend.config import BTG_BLUE, INK, LINE, MUTED, SURFACE
+from frontend.config import BRAND_BLUE, INK, LINE, MUTED, SURFACE
 
 
 def configure_page() -> None:
     st.set_page_config(
-        page_title="BTG | FII Intelligence",
-        page_icon="BTG",
+        page_title="FII Offer Radar",
+        page_icon="📈",
         layout="wide",
     )
 
@@ -16,7 +16,7 @@ def inject_css() -> None:
         f"""
         <style>
         :root {{
-            --btg-blue: {BTG_BLUE};
+            --brand-blue: {BRAND_BLUE};
             --ink: {INK};
             --muted: {MUTED};
             --line: {LINE};
@@ -33,7 +33,7 @@ def inject_css() -> None:
         }}
         .top-band {{
             border: 1px solid var(--line);
-            border-left: 6px solid var(--btg-blue);
+            border-left: 6px solid var(--brand-blue);
             background: linear-gradient(90deg, #FFFFFF 0%, #F4F8FC 100%);
             padding: 18px 20px;
             border-radius: 8px;
@@ -95,7 +95,7 @@ def inject_css() -> None:
             width: 26px;
             height: 26px;
             border-radius: 50%;
-            background: var(--btg-blue);
+            background: var(--brand-blue);
             color: #FFFFFF;
             display: inline-flex;
             align-items: center;

@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
-from frontend.config import BTG_BLUE, RED, TEAL
+from frontend.config import BRAND_BLUE, RED, TEAL
 from frontend.formatters import formatar_moeda, formatar_percentual
 
 ALERTAS_DIR = Path("src/data/alertas_autonomos")
@@ -41,7 +41,7 @@ def render_market(ofertas: pd.DataFrame) -> None:
         .sort_values("ano_mes")
     )
     fig = make_subplots(specs=[[{"secondary_y": True}]])
-    fig.add_trace(go.Bar(x=mensal["ano_mes"], y=mensal["volume"], name="Volume", marker_color=BTG_BLUE), secondary_y=False)
+    fig.add_trace(go.Bar(x=mensal["ano_mes"], y=mensal["volume"], name="Volume", marker_color=BRAND_BLUE), secondary_y=False)
     fig.add_trace(go.Scatter(x=mensal["ano_mes"], y=mensal["selic"], name="Selic", line={"color": RED, "width": 3}), secondary_y=True)
     if mensal["cdi"].notna().any():
         fig.add_trace(go.Scatter(x=mensal["ano_mes"], y=mensal["cdi"], name="CDI", line={"color": TEAL, "width": 2}), secondary_y=True)
@@ -67,7 +67,7 @@ def render_market(ofertas: pd.DataFrame) -> None:
             .sort_values("volume", ascending=False)
             .head(12)
         )
-        fig_lider = px.bar(lideres.sort_values("volume"), x="volume", y="nome_lider", orientation="h", color_discrete_sequence=[BTG_BLUE], labels={"volume": "Volume", "nome_lider": "Coordenador"}, title="Top coordenadores")
+        fig_lider = px.bar(lideres.sort_values("volume"), x="volume", y="nome_lider", orientation="h", color_discrete_sequence=[BRAND_BLUE], labels={"volume": "Volume", "nome_lider": "Coordenador"}, title="Top coordenadores")
         fig_lider.update_layout(height=390, margin={"l": 10, "r": 10, "t": 48, "b": 20})
         st.plotly_chart(fig_lider, use_container_width=True)
 
