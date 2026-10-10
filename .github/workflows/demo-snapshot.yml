@@ -1,0 +1,51 @@
+name: Atualiza o snapshot da demo
+
+# Roda o pipeline nos servidores do GitHub (que alcancam CVM, BCB e Yahoo) e
+# versiona a base em demo/, usada pela demo publica no Streamlit Community Cloud
+# quando nao existe base local. Documentos com IA ficam de fora: nao exigem chave.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 9 * * 1" # segunda-feira, 06:00 em Brasilia
+
+permissions:
+  contents: write
+
+concurrency:
+  group: demo-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt && pip install -e .
+
+      - name: Roda o pipeline
+        run: python src/main.py --force
+
+      - name: Copia a base para demo/
+        run: |
+          test -f src/data/processed/fii_warehouse.duckdb
+          mkdir -p demo
+          cp src/data/processed/fii_warehouse.duckdb demo/
+          cp src/data/processed/ofertas_fiis_pronto_para_ia.csv demo/
+          ls -la demo
+
+      - name: Versiona o snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          git add -f demo/fii_warehouse.duckdb demo/ofertas_fiis_pronto_para_ia.csv
+          if git diff --cached --quiet; then
+            echo "Snapshot sem mudancas."
+          else
+            git commit -m "data: atualiza o snapshot da demo"
+            git push
+          fi
