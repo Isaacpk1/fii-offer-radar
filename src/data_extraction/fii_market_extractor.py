@@ -5,7 +5,6 @@ import yfinance as yf
 
 from data_extraction.fii_ticker_mapper import get_ticker_by_cnpj
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAW_DATA_DIR = PROJECT_ROOT / "src" / "data" / "raw"
 

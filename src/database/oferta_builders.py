@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-import json
-from datetime import datetime
-
 import pandas as pd
 
 from database.build_common import (
     PROCESSED_DATA_DIR,
     RAW_DATA_DIR,
-    _coalesce_duplicate_columns,
     _ensure_columns,
-    _normalizar_yield_mensal,
     _read_csv,
     _to_datetime,
     _to_numeric,

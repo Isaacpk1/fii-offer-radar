@@ -5,11 +5,10 @@ import binascii
 import hashlib
 import json
 from pathlib import Path
-from urllib.parse import urlparse
 
 import requests
 
-from data_extraction.oferta_document_common import USER_AGENT, _slug
+from data_extraction.oferta_document_common import USER_AGENT
 
 
 def _extrair_pdf_bytes_de_conteudo(conteudo: bytes, content_type: str = "") -> bytes:

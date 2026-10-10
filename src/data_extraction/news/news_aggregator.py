@@ -8,7 +8,6 @@ from .funds_explorer import FundsExplorerScraper
 from .infomoney import InfoMoneyScraper
 from .valor_economico import ValorEconomicoScraper
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 OUTPUT_PATH = PROJECT_ROOT / "src" / "data" / "processed" / "noticias_fiis.json"
 

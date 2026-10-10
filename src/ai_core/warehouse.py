@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import pandas as pd
 import duckdb
+import pandas as pd
 
 from ai_core.tool_config import CSV_PATH, WAREHOUSE_PATH
 

@@ -1,9 +1,8 @@
 from pathlib import Path
 
-from bcb import sgs
 import pandas as pd
 import yfinance as yf
-
+from bcb import sgs
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAW_DATA_DIR = PROJECT_ROOT / "src" / "data" / "raw"

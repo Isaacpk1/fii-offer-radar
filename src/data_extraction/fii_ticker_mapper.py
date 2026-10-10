@@ -10,7 +10,6 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAW_DATA_DIR = PROJECT_ROOT / "src" / "data" / "raw"
 CACHE_PATH = RAW_DATA_DIR / "fii_cnpj_ticker_map.csv"

@@ -7,7 +7,6 @@ from bcb import sgs
 
 from ai_core.tool_config import MACRO_CODES, WAREHOUSE_PATH
 
-
 WAREHOUSE_MACRO_COLUMNS = {
     "selic": "taxa_selic",
     "ipca": "ipca_12m",

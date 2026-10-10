@@ -1,11 +1,10 @@
-import sys
 import argparse
+import sys
 from datetime import datetime
 from pathlib import Path
 
 import duckdb
 import pandas as pd
-
 
 SRC_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SRC_DIR))
@@ -24,13 +23,17 @@ WAREHOUSE_REQUIRED_COLUMNS = {
     ]
 }
 
-from data_extraction import cvm_extractor, macro_extractor
+from data_extraction import (
+    cvm_extractor,
+    fii_informe_extractor,
+    fii_market_extractor,
+    macro_extractor,
+    oferta_document_downloader,
+    oferta_document_extractor,
+    oferta_document_llm_extractor,
+    status_monitor,
+)
 from data_extraction.news import news_aggregator
-from data_extraction import status_monitor
-from data_extraction import fii_informe_extractor, fii_market_extractor
-from data_extraction import oferta_document_downloader
-from data_extraction import oferta_document_extractor
-from data_extraction import oferta_document_llm_extractor
 from data_processing import cleaner, enricher
 from database import build_database
 

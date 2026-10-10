@@ -3,21 +3,20 @@ from __future__ import annotations
 import html
 import re
 from dataclasses import dataclass
-from pathlib import Path
 
 try:
     from data_extraction.oferta_document_manifest import (
         DOCUMENTS_DIR,
-        MANIFEST_PATH,
+        MANIFEST_PATH,  # noqa: F401 (reexportado)
         PROCESSED_DATA_DIR,
-        gerar_manifesto_documentos_pendentes,
+        gerar_manifesto_documentos_pendentes,  # noqa: F401 (reexportado)
     )
 except ModuleNotFoundError:
     from oferta_document_manifest import (
         DOCUMENTS_DIR,
-        MANIFEST_PATH,
+        MANIFEST_PATH,  # noqa: F401 (reexportado)
         PROCESSED_DATA_DIR,
-        gerar_manifesto_documentos_pendentes,
+        gerar_manifesto_documentos_pendentes,  # noqa: F401 (reexportado)
     )
 
 

@@ -1,21 +1,13 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime
 
 import pandas as pd
 
-from database.build_common import (
-    PROCESSED_DATA_DIR,
-    RAW_DATA_DIR,
-    _coalesce_duplicate_columns,
-    _ensure_columns,
-    _normalizar_yield_mensal,
-    _read_csv,
-    _to_datetime,
-    _to_numeric,
-)
 from data_processing.confidence_scorer import enriquecer_dataframe_com_confianca
+from database.build_common import (
+    _ensure_columns,
+)
 
 
 def _classificar_preco_b3(row: pd.Series) -> str:

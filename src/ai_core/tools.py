@@ -14,15 +14,6 @@ from ai_core.tools_read import (
     resumir_qualidade_base,
 )
 from ai_core.tools_write import gerar_brief_oferta, registrar_decisao_analista
-from ai_core.warehouse import (
-    _carregar_base_csv,
-    _limite,
-    _normalizar_df,
-    _query_warehouse,
-    _to_json,
-    _tokens_busca,
-    _warehouse_disponivel,
-)
 
 AGENT_TOOLS = [
     avaliar_confianca_analise,

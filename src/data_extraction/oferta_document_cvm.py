@@ -4,10 +4,8 @@ from datetime import datetime
 from typing import Iterable
 
 import pandas as pd
-import requests
 
-from data_extraction.oferta_document_common import CVM_DOCS_DIR, CVM_DOCS_URL, CVM_TIPOS_RELEVANTES, USER_AGENT, _normalizar_texto
-from data_extraction.oferta_document_search import _classificar_documento
+from data_extraction.oferta_document_common import CVM_DOCS_DIR, CVM_DOCS_URL, CVM_TIPOS_RELEVANTES, _normalizar_texto
 
 
 def _anos_para_documentos(manifest: pd.DataFrame) -> list[int]:

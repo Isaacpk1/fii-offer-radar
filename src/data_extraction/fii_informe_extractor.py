@@ -6,7 +6,6 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAW_DATA_DIR = PROJECT_ROOT / "src" / "data" / "raw"
 BASE_URL = "https://dados.cvm.gov.br/dados/FII/DOC/INF_MENSAL/DADOS"
