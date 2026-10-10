@@ -3,8 +3,18 @@ from __future__ import annotations
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-CSV_PATH = PROJECT_ROOT / "src" / "data" / "processed" / "ofertas_fiis_pronto_para_ia.csv"
-WAREHOUSE_PATH = PROJECT_ROOT / "src" / "data" / "processed" / "fii_warehouse.duckdb"
+PROCESSED_DATA_DIR = PROJECT_ROOT / "src" / "data" / "processed"
+DEMO_DATA_DIR = PROJECT_ROOT / "demo"
+
+
+def _com_fallback_demo(nome: str) -> Path:
+    local = PROCESSED_DATA_DIR / nome
+    demo = DEMO_DATA_DIR / nome
+    return local if local.exists() or not demo.exists() else demo
+
+
+CSV_PATH = _com_fallback_demo("ofertas_fiis_pronto_para_ia.csv")
+WAREHOUSE_PATH = _com_fallback_demo("fii_warehouse.duckdb")
 BRIEFS_DIR = PROJECT_ROOT / "src" / "data" / "briefs"
 
 MACRO_CODES = {

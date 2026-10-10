@@ -4,8 +4,20 @@ from pathlib import Path
 SRC_DIR = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = SRC_DIR.parent
 PROCESSED_DATA_DIR = SRC_DIR / "data" / "processed"
-WAREHOUSE_PATH = PROCESSED_DATA_DIR / "fii_warehouse.duckdb"
-OFERTAS_PATH = PROCESSED_DATA_DIR / "ofertas_fiis_pronto_para_ia.csv"
+# Snapshot versionado para a demo publica: usado so quando o pipeline local
+# ainda nao gerou a base em src/data/processed.
+DEMO_DATA_DIR = PROJECT_ROOT / "demo"
+
+
+def _com_fallback_demo(nome: str) -> Path:
+    local = PROCESSED_DATA_DIR / nome
+    demo = DEMO_DATA_DIR / nome
+    return local if local.exists() or not demo.exists() else demo
+
+
+WAREHOUSE_PATH = _com_fallback_demo("fii_warehouse.duckdb")
+OFERTAS_PATH = _com_fallback_demo("ofertas_fiis_pronto_para_ia.csv")
+USANDO_DEMO = WAREHOUSE_PATH.parent == DEMO_DATA_DIR
 STATUS_ALERTS_PATH = PROCESSED_DATA_DIR / "status_monitor_alerts.json"
 
 if str(SRC_DIR) not in sys.path:

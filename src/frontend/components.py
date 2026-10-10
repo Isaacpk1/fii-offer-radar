@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-from frontend.config import STATUS_ALERTS_PATH, WAREHOUSE_PATH
+from frontend.config import STATUS_ALERTS_PATH, USANDO_DEMO, WAREHOUSE_PATH
 from frontend.data import get_connection
 
 try:
@@ -109,6 +109,11 @@ def render_sidebar_status() -> None:
         st.markdown("### Estado da base")
         if WAREHOUSE_PATH.exists():
             badge("Warehouse carregado", "status-ok")
+            if USANDO_DEMO:
+                st.caption(
+                    "Demo publica com um snapshot da base. "
+                    "Rode `python src/main.py` para coletar dados atuais."
+                )
         else:
             badge("Warehouse ausente", "status-empty")
 

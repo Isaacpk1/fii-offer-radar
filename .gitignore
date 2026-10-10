@@ -37,6 +37,8 @@ src/data/**
 
 # Bancos locais / locks
 *.duckdb
+# Snapshot da demo publica (Streamlit Community Cloud) e versionado de proposito.
+!demo/fii_warehouse.duckdb
 *.duckdb.wal
 *.duckdb.tmp
 

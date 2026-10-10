@@ -11,16 +11,16 @@ from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 try:
+    from ai_core.tool_config import CSV_PATH, WAREHOUSE_PATH
     from ai_core.tools import AGENT_TOOLS
 except ModuleNotFoundError:
+    from src.ai_core.tool_config import CSV_PATH, WAREHOUSE_PATH
     from src.ai_core.tools import AGENT_TOOLS
 
 
 load_dotenv()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-CSV_PATH = PROJECT_ROOT / "src" / "data" / "processed" / "ofertas_fiis_pronto_para_ia.csv"
-WAREHOUSE_PATH = PROJECT_ROOT / "src" / "data" / "processed" / "fii_warehouse.duckdb"
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 
