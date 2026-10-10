@@ -8,6 +8,10 @@
 
 Toda semana surgem novas ofertas de cotas de FIIs, e avaliar cada uma exige cruzar o preco de emissao com o valor patrimonial, o preco na B3, a liquidez, o historico do emissor, o cenario macro e o que esta escrito no prospecto. Este projeto automatiza essa coleta e entrega, para cada oferta, um **score de priorizacao** e um **score de confianca auditavel** (quais dados existem, quais faltam e quais sinais se contradizem), alem de um copiloto que responde perguntas sobre o warehouse.
 
+**▶ [Abrir a demo ao vivo](https://fii-offer-radar-kjrtjvayjttws5ycdh6euu.streamlit.app/)** · Streamlit Community Cloud
+
+A demo usa um snapshot da base, regerado toda segunda-feira por um [workflow do GitHub Actions](.github/workflows/demo-snapshot.yml). O Copiloto fica desligado na demo publica porque exige chave do Gemini; as outras abas funcionam com os dados reais da CVM e do Banco Central.
+
 > Ferramenta de apoio a triagem. Nao e recomendacao de investimento.
 
 ## Destaques
